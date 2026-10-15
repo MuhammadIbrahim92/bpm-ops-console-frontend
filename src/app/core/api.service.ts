@@ -14,6 +14,9 @@ export interface InstanceQuery {
   to?: string;
   olderThanHours?: number | null;
   includeTest?: boolean;
+  createdBy?: string;
+  sort?: string;
+  dir?: 'asc' | 'desc';
   page?: number;
   size?: number;
 }
@@ -24,6 +27,8 @@ export interface RequestQuery {
   text?: string;
   from?: string;
   to?: string;
+  sort?: string;
+  dir?: 'asc' | 'desc';
   page?: number;
   size?: number;
 }
@@ -57,9 +62,9 @@ export class ApiService {
     return this.http.get<InstanceSummary>(`${this.base}/instances/${id}`);
   }
 
-  activities(id: number, page = 0, size = 50, activityId?: string): Observable<Page<StepRow>> {
+  activities(id: number, page = 0, size = 50, activityId?: string, sort?: string, dir?: 'asc' | 'desc'): Observable<Page<StepRow>> {
     return this.http.get<Page<StepRow>>(`${this.base}/instances/${id}/activities`,
-      { params: toParams({ page, size, activityId: activityId ?? '' }) });
+      { params: toParams({ page, size, activityId: activityId ?? '', sort: sort ?? '', dir: sort ? dir ?? 'asc' : '' }) });
   }
 
   processAttributes(id: number, page = 0, size = 50): Observable<AttributePage> {

@@ -29,6 +29,18 @@ hides what the backend would refuse anyway. The sidebar menu is built from the f
   PrimeNG theme, and the step colours (`.st-*`) used by the diagram.
 * Status is always shown with a symbol and text (`app-status-badge`, a PrimeNG tag), never colour alone.
 
+## Tables
+
+Every table is a PrimeNG `p-table` with a shared toolbar (`shared/table-tools.component.ts`):
+
+* **Sorting** by column. Server-paged tables (instances, request queue, steps) sort the whole result on the backend
+  (`sort` and `dir` query parameters, a fixed list of columns); small tables sort in the browser.
+* **Filtering**: per-column filters and a quick search box on tables held in the browser (issues, process health,
+  dashboard, attributes, engine and timer requests). Server-paged tables filter through their search form.
+* **Columns**: show/hide through the *Columns* menu, drag the column border to resize.
+* **Export CSV** of the rows shown (current page for server-paged tables, filtered rows otherwise).
+* **Clear** resets filters and sorting. Row details expand where a row has more columns than fit.
+
 ## Sign-in
 
 The app shows its own sign-in page. User name and password are posted to `POST api/auth/login`; the backend answers

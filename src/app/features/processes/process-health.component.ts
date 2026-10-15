@@ -5,16 +5,18 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { ApiService } from '../../core/api.service';
 import { describeError } from '../../core/errors';
 import { ActivityStat, Lookups } from '../../core/models';
+import { downloadCsv } from '../../shared/csv';
 import { DurationPipe } from '../../shared/pipes';
+import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
 
 @Component({
   selector: 'app-process-health',
   standalone: true,
-  imports: [FormsModule, ButtonModule, InputTextModule, MessageModule, ProgressBarModule, SelectModule, TableModule, DurationPipe],
+  imports: [FormsModule, ButtonModule, InputTextModule, MessageModule, ProgressBarModule, SelectModule, TableModule, TableToolsComponent, DurationPipe],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1">Process health</div>
@@ -44,35 +46,41 @@ import { DurationPipe } from '../../shared/pipes';
 
     @if (loaded()) {
       <div class="card">
-        <p-table [value]="stats()" [loading]="loading()" [paginator]="stats().length > 25" [rows]="25" [rowHover]="true"
+        <app-table-tools [columns]="columns" [visible]="visible()" (visibleChange)="visible.set($event)"
+          (searchChange)="dt.filterGlobal($event, 'contains')" (exportCsv)="export(dt)" (clear)="clearAll(dt)" />
+        <p-table #dt [value]="stats()" [loading]="loading()" [paginator]="stats().length > 25" [rows]="25" [rowHover]="true"
+          [stripedRows]="true" [resizableColumns]="true" columnResizeMode="expand" [scrollable]="true"
+          [rowsPerPageOptions]="[25, 50, 100]" [globalFilterFields]="['activityId']"
           [sortField]="'avgSeconds'" [sortOrder]="-1" [tableStyle]="{ 'min-width': '60rem' }">
           <ng-template #header>
             <tr>
-              <th pSortableColumn="activityId">Step <p-sortIcon field="activityId" /></th>
-              <th pSortableColumn="executions" class="text-right">Runs <p-sortIcon field="executions" /></th>
-              <th pSortableColumn="running" class="text-right">Running now <p-sortIcon field="running" /></th>
-              <th pSortableColumn="failed" class="text-right">Failed <p-sortIcon field="failed" /></th>
-              <th pSortableColumn="avgSeconds">Average time <p-sortIcon field="avgSeconds" /></th>
-              <th pSortableColumn="maxSeconds" class="text-right">Slowest <p-sortIcon field="maxSeconds" /></th>
-              <th pSortableColumn="longestRunningSeconds" class="text-right">Longest wait now <p-sortIcon field="longestRunningSeconds" /></th>
+              @if (col('activityId')) { <th pSortableColumn="activityId" pResizableColumn>Step <p-sortIcon field="activityId" /><p-columnFilter type="text" field="activityId" display="menu" /></th> }
+              @if (col('executions')) { <th pSortableColumn="executions" pResizableColumn class="text-right">Runs <p-sortIcon field="executions" /><p-columnFilter type="numeric" field="executions" display="menu" /></th> }
+              @if (col('running')) { <th pSortableColumn="running" pResizableColumn class="text-right">Running now <p-sortIcon field="running" /><p-columnFilter type="numeric" field="running" display="menu" /></th> }
+              @if (col('failed')) { <th pSortableColumn="failed" pResizableColumn class="text-right">Failed <p-sortIcon field="failed" /><p-columnFilter type="numeric" field="failed" display="menu" /></th> }
+              @if (col('avgSeconds')) { <th pSortableColumn="avgSeconds" pResizableColumn>Average time <p-sortIcon field="avgSeconds" /><p-columnFilter type="numeric" field="avgSeconds" display="menu" /></th> }
+              @if (col('maxSeconds')) { <th pSortableColumn="maxSeconds" pResizableColumn class="text-right">Slowest <p-sortIcon field="maxSeconds" /></th> }
+              @if (col('longestRunningSeconds')) { <th pSortableColumn="longestRunningSeconds" pResizableColumn class="text-right">Longest wait now <p-sortIcon field="longestRunningSeconds" /></th> }
             </tr>
           </ng-template>
           <ng-template #body let-s>
             <tr>
-              <td class="mono">{{ s.activityId }}</td>
-              <td class="text-right">{{ s.executions }}</td>
-              <td class="text-right">{{ s.running }}</td>
-              <td class="text-right">@if (s.failed > 0) { <strong class="bad">{{ s.failed }}</strong> } @else { 0 }</td>
-              <td style="min-width: 12rem">
-                <p-progressbar [value]="width(s.avgSeconds)" [showValue]="false" [style]="{ height: '8px' }" />
-                <span class="text-sm">{{ s.avgSeconds | duration }}</span>
-              </td>
-              <td class="text-right">{{ s.maxSeconds | duration }}</td>
-              <td class="text-right">{{ s.longestRunningSeconds | duration }}</td>
+              @if (col('activityId')) { <td class="mono">{{ s.activityId }}</td> }
+              @if (col('executions')) { <td class="text-right">{{ s.executions }}</td> }
+              @if (col('running')) { <td class="text-right">{{ s.running }}</td> }
+              @if (col('failed')) { <td class="text-right">@if (s.failed > 0) { <strong class="bad">{{ s.failed }}</strong> } @else { 0 }</td> }
+              @if (col('avgSeconds')) {
+                <td style="min-width: 12rem">
+                  <p-progressbar [value]="width(s.avgSeconds)" [showValue]="false" [style]="{ height: '8px' }" />
+                  <span class="text-sm">{{ s.avgSeconds | duration }}</span>
+                </td>
+              }
+              @if (col('maxSeconds')) { <td class="text-right">{{ s.maxSeconds | duration }}</td> }
+              @if (col('longestRunningSeconds')) { <td class="text-right">{{ s.longestRunningSeconds | duration }}</td> }
             </tr>
           </ng-template>
           <ng-template #emptymessage>
-            <tr><td colspan="7">No activity was recorded for this process in the period.</td></tr>
+            <tr><td [attr.colspan]="visible().length || 1">No activity was recorded for this process in the period.</td></tr>
           </ng-template>
         </p-table>
       </div>
@@ -96,6 +104,36 @@ export class ProcessHealthComponent implements OnInit {
     { label: 'Last 30 days', value: 30 },
     { label: 'Last 90 days', value: 90 }
   ];
+
+  readonly columns: ToolColumn[] = [
+    { field: 'activityId', header: 'Step' },
+    { field: 'executions', header: 'Runs' },
+    { field: 'running', header: 'Running now' },
+    { field: 'failed', header: 'Failed' },
+    { field: 'avgSeconds', header: 'Average time' },
+    { field: 'maxSeconds', header: 'Slowest' },
+    { field: 'longestRunningSeconds', header: 'Longest wait now' }
+  ];
+  readonly visible = signal<string[]>(this.columns.map(c => c.field));
+
+  col(field: string): boolean {
+    return this.visible().includes(field);
+  }
+
+  clearAll(dt: Table): void {
+    dt.clear();
+    dt.reset();
+  }
+
+  export(dt: Table): void {
+    const rows = (dt.filteredValue ?? this.stats()) as ActivityStat[];
+    downloadCsv('process-health', [
+      { field: 'activityId', header: 'Step' }, { field: 'executions', header: 'Runs' },
+      { field: 'running', header: 'Running now' }, { field: 'failed', header: 'Failed' },
+      { field: 'avgSeconds', header: 'Average seconds' }, { field: 'maxSeconds', header: 'Slowest seconds' },
+      { field: 'longestRunningSeconds', header: 'Longest wait now (seconds)' }
+    ], rows);
+  }
 
   processId: number | null = null;
   version = '';

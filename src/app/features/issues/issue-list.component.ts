@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MessageModule } from 'primeng/message';
-import { TableModule } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { TabsModule } from 'primeng/tabs';
 import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/api.service';
@@ -9,12 +9,14 @@ import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
 import { ISSUE_INFO, ISSUE_ORDER, isIssueType } from '../../core/issue-info';
 import { Issue, IssueType } from '../../core/models';
+import { downloadCsv } from '../../shared/csv';
 import { AgePipe, DateTimePipe } from '../../shared/pipes';
+import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
 
 @Component({
   selector: 'app-issue-list',
   standalone: true,
-  imports: [RouterLink, MessageModule, TableModule, TabsModule, TagModule, AgePipe, DateTimePipe],
+  imports: [RouterLink, MessageModule, TableModule, TabsModule, TagModule, TableToolsComponent, AgePipe, DateTimePipe],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1">Issues</div>
@@ -34,29 +36,40 @@ import { AgePipe, DateTimePipe } from '../../shared/pipes';
       <p class="text-muted-color my-4">{{ info[type()].hint }}</p>
       @if (error()) { <p-message severity="error" [text]="error()!" styleClass="mb-4" /> }
 
-      <p-table [value]="items()" [loading]="loading()" [paginator]="items().length > 25" [rows]="25"
-        [rowsPerPageOptions]="[25, 50, 100]" [rowHover]="true" [tableStyle]="{ 'min-width': '60rem' }">
+      <app-table-tools [columns]="columns" [visible]="visible()" (visibleChange)="visible.set($event)"
+        (searchChange)="dt.filterGlobal($event, 'contains')" (exportCsv)="export(dt)" (clear)="clearAll(dt)" />
+
+      <p-table #dt [value]="items()" [loading]="loading()" [paginator]="items().length > 25" [rows]="25"
+        [rowsPerPageOptions]="[25, 50, 100]" [rowHover]="true" [stripedRows]="true" [resizableColumns]="true"
+        columnResizeMode="expand" [scrollable]="true" [sortField]="'since'" [sortOrder]="1"
+        [globalFilterFields]="['severity', 'instanceName', 'instanceId', 'processName', 'activityId', 'detail']"
+        [tableStyle]="{ 'min-width': '60rem' }">
         <ng-template #header>
           <tr>
-            <th>Severity</th><th>Instance</th><th>Process</th><th>Step</th><th>Since</th><th>Detail</th>
-            @if (auth.can('VIEW_REQUESTS')) { <th>Request</th> }
+            @if (col('severity')) { <th pSortableColumn="severity" pResizableColumn>Severity <p-sortIcon field="severity" /><p-columnFilter type="text" field="severity" display="menu" /></th> }
+            @if (col('instanceName')) { <th pSortableColumn="instanceName" pResizableColumn>Instance <p-sortIcon field="instanceName" /><p-columnFilter type="text" field="instanceName" display="menu" /></th> }
+            @if (col('processName')) { <th pSortableColumn="processName" pResizableColumn>Process <p-sortIcon field="processName" /><p-columnFilter type="text" field="processName" display="menu" /></th> }
+            @if (col('activityId')) { <th pSortableColumn="activityId" pResizableColumn>Step <p-sortIcon field="activityId" /><p-columnFilter type="text" field="activityId" display="menu" /></th> }
+            @if (col('since')) { <th pSortableColumn="since" pResizableColumn>Since <p-sortIcon field="since" /></th> }
+            @if (col('detail')) { <th pSortableColumn="detail" pResizableColumn>Detail <p-sortIcon field="detail" /><p-columnFilter type="text" field="detail" display="menu" /></th> }
+            @if (col('requestId') && auth.can('VIEW_REQUESTS')) { <th pSortableColumn="requestId" pResizableColumn>Request <p-sortIcon field="requestId" /></th> }
           </tr>
         </ng-template>
         <ng-template #body let-i>
           <tr>
-            <td><p-tag [value]="i.severity" [severity]="severity(i.severity)" /></td>
-            <td>@if (i.instanceId) { <a [routerLink]="['/instances', i.instanceId]">{{ i.instanceName || i.instanceId }}</a> <span class="text-muted-color">#{{ i.instanceId }}</span> }</td>
-            <td>{{ i.processName }}</td>
-            <td class="mono">{{ i.activityId }}</td>
-            <td class="nowrap" [title]="i.since | dateTime">{{ i.since | age }}</td>
-            <td>{{ i.detail }}</td>
-            @if (auth.can('VIEW_REQUESTS')) {
+            @if (col('severity')) { <td><p-tag [value]="i.severity" [severity]="severity(i.severity)" /></td> }
+            @if (col('instanceName')) { <td>@if (i.instanceId) { <a [routerLink]="['/instances', i.instanceId]">{{ i.instanceName || i.instanceId }}</a> <span class="text-muted-color">#{{ i.instanceId }}</span> }</td> }
+            @if (col('processName')) { <td>{{ i.processName }}</td> }
+            @if (col('activityId')) { <td class="mono">{{ i.activityId }}</td> }
+            @if (col('since')) { <td class="nowrap" [title]="i.since | dateTime">{{ i.since | age }}</td> }
+            @if (col('detail')) { <td>{{ i.detail }}</td> }
+            @if (col('requestId') && auth.can('VIEW_REQUESTS')) {
               <td>@if (i.requestId) { <a [routerLink]="['/requests']" [queryParams]="{ text: i.requestId }">#{{ i.requestId }}</a> }</td>
             }
           </tr>
         </ng-template>
         <ng-template #emptymessage>
-          <tr><td [attr.colspan]="auth.can('VIEW_REQUESTS') ? 7 : 6">Nothing found. All clear for this check.</td></tr>
+          <tr><td [attr.colspan]="visible().length || 1">Nothing found. All clear for this check.</td></tr>
         </ng-template>
       </p-table>
     </div>
@@ -75,6 +88,21 @@ export class IssueListComponent implements OnInit {
   readonly items = signal<Issue[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+
+  readonly columns: ToolColumn[] = [
+    { field: 'severity', header: 'Severity' },
+    { field: 'instanceName', header: 'Instance' },
+    { field: 'processName', header: 'Process' },
+    { field: 'activityId', header: 'Step' },
+    { field: 'since', header: 'Since' },
+    { field: 'detail', header: 'Detail' },
+    { field: 'requestId', header: 'Request' }
+  ];
+  readonly visible = signal<string[]>(this.columns.map(c => c.field));
+
+  col(field: string): boolean {
+    return this.visible().includes(field);
+  }
 
   ngOnInit(): void {
     this.api.issueSummary().subscribe({
@@ -109,6 +137,22 @@ export class IssueListComponent implements OnInit {
       default:
         return 'secondary';
     }
+  }
+
+  clearAll(dt: Table): void {
+    dt.clear();
+    dt.reset();
+  }
+
+  /** Exports the rows that pass the current filters, in the current order. */
+  export(dt: Table): void {
+    const rows = (dt.filteredValue ?? this.items()) as Issue[];
+    downloadCsv(`issues-${this.type().toLowerCase()}`, [
+      { field: 'severity', header: 'Severity' }, { field: 'instanceId', header: 'Instance id' },
+      { field: 'instanceName', header: 'Instance' }, { field: 'processName', header: 'Process' },
+      { field: 'activityId', header: 'Step' }, { field: 'since', header: 'Since' },
+      { field: 'detail', header: 'Detail' }, { field: 'requestId', header: 'Request' }
+    ], rows);
   }
 
   private load(): void {

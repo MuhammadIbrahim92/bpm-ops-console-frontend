@@ -52,9 +52,16 @@ interface Tile {
 
       <div class="card mt-4">
         <div class="font-semibold text-xl mb-4">Oldest failed steps</div>
-        <p-table [value]="failures()" [loading]="loading()" [rowHover]="true" [tableStyle]="{ 'min-width': '40rem' }">
+        <p-table [value]="failures()" [loading]="loading()" [rowHover]="true" [stripedRows]="true"
+          [resizableColumns]="true" columnResizeMode="expand" [tableStyle]="{ 'min-width': '40rem' }">
           <ng-template #header>
-            <tr><th>Instance</th><th>Process</th><th>Step</th><th>Since</th><th>What happened</th></tr>
+            <tr>
+              <th pSortableColumn="instanceName" pResizableColumn>Instance <p-sortIcon field="instanceName" /><p-columnFilter type="text" field="instanceName" display="menu" /></th>
+              <th pSortableColumn="processName" pResizableColumn>Process <p-sortIcon field="processName" /><p-columnFilter type="text" field="processName" display="menu" /></th>
+              <th pSortableColumn="activityId" pResizableColumn>Step <p-sortIcon field="activityId" /><p-columnFilter type="text" field="activityId" display="menu" /></th>
+              <th pSortableColumn="since" pResizableColumn>Since <p-sortIcon field="since" /></th>
+              <th pSortableColumn="detail" pResizableColumn>What happened <p-sortIcon field="detail" /><p-columnFilter type="text" field="detail" display="menu" /></th>
+            </tr>
           </ng-template>
           <ng-template #body let-i>
             <tr>

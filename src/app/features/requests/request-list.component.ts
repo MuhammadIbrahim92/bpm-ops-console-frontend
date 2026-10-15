@@ -11,7 +11,9 @@ import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
 import { Lookups, RequestRow } from '../../core/models';
 import { requestLook } from '../../core/status';
+import { downloadCsv } from '../../shared/csv';
 import { AgePipe, DateTimePipe } from '../../shared/pipes';
+import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
 import { Field, recFields, showValue } from '../../shared/request-fields';
 import { RetryButtonComponent } from '../../shared/retry-button.component';
 import { StatusBadgeComponent } from '../../shared/status-badge.component';
@@ -20,7 +22,7 @@ import { StatusBadgeComponent } from '../../shared/status-badge.component';
   selector: 'app-request-list',
   standalone: true,
   imports: [FormsModule, RouterLink, ButtonModule, InputTextModule, MessageModule, SelectModule, TableModule,
-    StatusBadgeComponent, RetryButtonComponent, DateTimePipe, AgePipe],
+    TableToolsComponent, StatusBadgeComponent, RetryButtonComponent, DateTimePipe, AgePipe],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1">Request queue</div>
@@ -57,14 +59,25 @@ import { StatusBadgeComponent } from '../../shared/status-badge.component';
 
     <div class="card">
       @if (error()) { <p-message severity="error" [text]="error()!" styleClass="mb-4" /> }
+      <app-table-tools [columns]="columns" [visible]="visible()" (visibleChange)="visible.set($event)" [search]="false"
+        note="Click a column title to sort the whole result. Export covers this page." (exportCsv)="export()" (clear)="reset()" />
       <p-table [value]="items()" dataKey="id" [lazy]="true" [loading]="loading()" [paginator]="true" [rows]="size()"
         [first]="page() * size()" [totalRecords]="total()" [rowsPerPageOptions]="[25, 50, 100, 200]"
         [showCurrentPageReport]="true" currentPageReportTemplate="{first} to {last} of {totalRecords} requests"
-        [rowHover]="true" [expandedRowKeys]="expanded()" [tableStyle]="{ 'min-width': '70rem' }" (onPage)="onPage($event)">
+        [sortField]="sortField() ?? undefined" [sortOrder]="sortOrder()" [resizableColumns]="true" columnResizeMode="expand"
+        [stripedRows]="true" [rowHover]="true" [expandedRowKeys]="expanded()" [scrollable]="true"
+        [tableStyle]="{ 'min-width': '70rem' }" (onPage)="onPage($event)" (onSort)="onSort($event)">
         <ng-template #header>
           <tr>
             <th style="width: 3rem"></th>
-            <th>Request</th><th>Type</th><th>Status</th><th>Requested</th><th>Fetched</th><th>Instance</th><th>Notes</th><th></th>
+            @if (col('id')) { <th pSortableColumn="id" pResizableColumn>Request <p-sortIcon field="id" /></th> }
+            @if (col('type')) { <th pSortableColumn="type" pResizableColumn>Type <p-sortIcon field="type" /></th> }
+            @if (col('status')) { <th pSortableColumn="status" pResizableColumn>Status <p-sortIcon field="status" /></th> }
+            @if (col('requestDate')) { <th pSortableColumn="requestDate" pResizableColumn>Requested <p-sortIcon field="requestDate" /></th> }
+            @if (col('fetchDate')) { <th pSortableColumn="fetchDate" pResizableColumn>Fetched <p-sortIcon field="fetchDate" /></th> }
+            @if (col('instanceId')) { <th pResizableColumn>Instance</th> }
+            @if (col('notes')) { <th pResizableColumn>Notes</th> }
+            <th></th>
           </tr>
         </ng-template>
         <ng-template #body let-r let-isOpen="expanded">
@@ -73,19 +86,19 @@ import { StatusBadgeComponent } from '../../shared/status-badge.component';
               <p-button type="button" [text]="true" [rounded]="true" severity="secondary" size="small"
                 [icon]="isOpen ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" [attr.aria-expanded]="isOpen" (onClick)="toggle(r.id)" />
             </td>
-            <td class="nowrap">{{ r.id }}</td>
-            <td>{{ r.type }}</td>
-            <td><app-status-badge [look]="look(r.status)" [text]="r.status" /></td>
-            <td class="nowrap">{{ r.requestDate | dateTime }}</td>
-            <td class="nowrap">{{ r.fetchDate | age }}</td>
-            <td>@if (r.instanceId) { <a [routerLink]="['/instances', r.instanceId]">#{{ r.instanceId }}</a> }</td>
-            <td class="clip" [title]="r.rejectionReason || r.notes || ''">{{ r.rejectionReason || r.notes }}</td>
+            @if (col('id')) { <td class="nowrap">{{ r.id }}</td> }
+            @if (col('type')) { <td>{{ r.type }}</td> }
+            @if (col('status')) { <td><app-status-badge [look]="look(r.status)" [text]="r.status" /></td> }
+            @if (col('requestDate')) { <td class="nowrap">{{ r.requestDate | dateTime }}</td> }
+            @if (col('fetchDate')) { <td class="nowrap">{{ r.fetchDate | age }}</td> }
+            @if (col('instanceId')) { <td>@if (r.instanceId) { <a [routerLink]="['/instances', r.instanceId]">#{{ r.instanceId }}</a> }</td> }
+            @if (col('notes')) { <td class="clip" [title]="r.rejectionReason || r.notes || ''">{{ r.rejectionReason || r.notes }}</td> }
             <td><app-retry-button [row]="r" [allowed]="auth.can('RETRY_REQUEST')" (retried)="replace($event)" /></td>
           </tr>
         </ng-template>
         <ng-template #expandedrow let-r>
           <tr>
-            <td colspan="9">
+            <td [attr.colspan]="visible().length + 2">
               <dl class="fields">
                 @for (fld of fields(r); track fld[0]) {
                   <div><dt>{{ fld[0] }}</dt><dd>{{ show(fld[1]) }}</dd></div>
@@ -95,7 +108,7 @@ import { StatusBadgeComponent } from '../../shared/status-badge.component';
           </tr>
         </ng-template>
         <ng-template #emptymessage>
-          <tr><td colspan="9">No requests match.</td></tr>
+          <tr><td [attr.colspan]="visible().length + 2">No requests match.</td></tr>
         </ng-template>
       </p-table>
     </div>
@@ -112,6 +125,40 @@ export class RequestListComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  readonly columns: ToolColumn[] = [
+    { field: 'id', header: 'Request' },
+    { field: 'type', header: 'Type' },
+    { field: 'status', header: 'Status' },
+    { field: 'requestDate', header: 'Requested' },
+    { field: 'fetchDate', header: 'Fetched' },
+    { field: 'instanceId', header: 'Instance' },
+    { field: 'notes', header: 'Notes' }
+  ];
+  readonly visible = signal<string[]>(this.columns.map(c => c.field));
+  readonly sortField = signal<string | null>(null);
+  readonly sortOrder = signal(1);
+
+  col(field: string): boolean {
+    return this.visible().includes(field);
+  }
+
+  export(): void {
+    downloadCsv('requests', [
+      { field: 'id', header: 'REQUEST_ID' }, { field: 'type', header: 'REQUEST_TYPE' },
+      { field: 'status', header: 'REQUEST_STATUS' }, { field: 'requestDate', header: 'REQUEST_DATE' },
+      { field: 'fetchDate', header: 'FETCH_DATE' }, { field: 'finishDate', header: 'FINISH_DATE' },
+      { field: 'engineId', header: 'ENGINE_ID' }, { field: 'executionTime', header: 'EXECUTION_TIME' },
+      { field: 'instanceId', header: 'INSTANCE' }, { field: 'notes', header: 'NOTES' },
+      { field: 'rejectionReason', header: 'REJECTION_REASON' }, { field: 'command', header: 'REQUEST_COMMAND' }
+    ], this.items());
+  }
+
+  onSort(e: { field: string; order: number }): void {
+    this.sortField.set(e.field);
+    this.sortOrder.set(e.order);
+    this.navigate(0, this.size());
+  }
 
   readonly size = signal(50);
   readonly lookups = signal<Lookups | null>(null);
@@ -147,6 +194,8 @@ export class RequestListComponent implements OnInit {
       this.page.set(q.get('page') ? Math.max(0, Number(q.get('page'))) : 0);
       const sz = Number(q.get('size'));
       this.size.set(sz >= 1 && sz <= 200 ? sz : 50);
+      this.sortField.set(q.get('sort'));
+      this.sortOrder.set(q.get('dir') === 'desc' ? -1 : 1);
       this.expanded.set({});
       this.load();
     });
@@ -170,6 +219,8 @@ export class RequestListComponent implements OnInit {
 
   reset(): void {
     this.f = { text: '', status: '', type: '', from: '', to: '' };
+    this.sortField.set(null);
+    this.sortOrder.set(1);
     this.navigate(0, this.size());
   }
 
@@ -186,13 +237,18 @@ export class RequestListComponent implements OnInit {
     this.router.navigate([], {
       queryParams: {
         text: f.text || null, status: f.status || null, type: f.type || null,
-        from: f.from || null, to: f.to || null, page: page > 0 ? page : null, size: size !== 50 ? size : null
+        from: f.from || null, to: f.to || null, sort: this.sortField(),
+        dir: this.sortField() && this.sortOrder() < 0 ? 'desc' : null,
+        page: page > 0 ? page : null, size: size !== 50 ? size : null
       }
     });
   }
 
   private load(): void {
-    const q: RequestQuery = { ...this.f, page: this.page(), size: this.size() };
+    const q: RequestQuery = {
+      ...this.f, page: this.page(), size: this.size(),
+      sort: this.sortField() ?? undefined, dir: this.sortOrder() < 0 ? 'desc' : 'asc'
+    };
     this.loading.set(true);
     this.error.set(null);
     this.api.requests(q).subscribe({

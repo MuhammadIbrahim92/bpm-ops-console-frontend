@@ -12,6 +12,8 @@ import { describeError } from '../../core/errors';
 import { ActivityState, AttributePage, DiagramNode, InstanceDiagram, InstanceSummary, RequestRow, StartForm, StepRow, TimerRequestRow, WorkItemHtml } from '../../core/models';
 import { kindLabel } from '../../core/diagram-geometry';
 import { PagerComponent } from '../../shared/pager.component';
+import { downloadCsv } from '../../shared/csv';
+import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
 import { RequestTablesComponent } from '../../shared/request-tables.component';
 import { activityLook, instanceLook, requestLook } from '../../core/status';
 import { DiagramViewComponent } from '../../shared/diagram-view.component';
@@ -25,7 +27,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
 @Component({
   selector: 'app-instance-detail',
   standalone: true,
-  imports: [ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
+  imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
   template: `
     <div class="mb-4">
       <p-button label="All instances" icon="pi pi-arrow-left" [text]="true" routerLink="/instances" />
@@ -135,12 +137,25 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
             </p>
           }
 
+          <app-table-tools [columns]="stepColumns" [visible]="stepVisible()" (visibleChange)="stepVisible.set($event)"
+            [search]="false" note="Click a column title to sort all steps. Export covers this page."
+            (exportCsv)="exportSteps()" (clear)="clearStepSort()" />
           <p-table [value]="activities()" dataKey="activityInstanceId" [lazy]="true" [paginator]="true" [rows]="stepSize()"
             [first]="stepPage() * stepSize()" [totalRecords]="stepTotal()" [rowsPerPageOptions]="[25, 50, 100, 200]"
             [showCurrentPageReport]="true" currentPageReportTemplate="{first} to {last} of {totalRecords} steps"
-            [expandedRowKeys]="stepExpanded()" [rowHover]="true" [tableStyle]="{ 'min-width': '50rem' }" (onPage)="onStepsPage($event)">
+            [sortField]="stepSortField() ?? undefined" [sortOrder]="stepSortOrder()" [resizableColumns]="true"
+            columnResizeMode="expand" [stripedRows]="true" [scrollable]="true"
+            [expandedRowKeys]="stepExpanded()" [rowHover]="true" [tableStyle]="{ 'min-width': '50rem' }"
+            (onPage)="onStepsPage($event)" (onSort)="onStepsSort($event)">
             <ng-template #header>
-              <tr><th style="width: 3rem"></th><th>Step</th><th>Type</th><th>Status</th><th>Started</th><th>Finished</th></tr>
+              <tr>
+                <th style="width: 3rem"></th>
+                @if (stepCol('activityId')) { <th pSortableColumn="activityId" pResizableColumn>Step <p-sortIcon field="activityId" /></th> }
+                @if (stepCol('taskType')) { <th pSortableColumn="taskType" pResizableColumn>Type <p-sortIcon field="taskType" /></th> }
+                @if (stepCol('status')) { <th pSortableColumn="status" pResizableColumn>Status <p-sortIcon field="status" /></th> }
+                @if (stepCol('start')) { <th pSortableColumn="start" pResizableColumn>Started <p-sortIcon field="start" /></th> }
+                @if (stepCol('finish')) { <th pSortableColumn="finish" pResizableColumn>Finished <p-sortIcon field="finish" /></th> }
+              </tr>
             </ng-template>
             <ng-template #body let-a let-isOpen="expanded">
               <tr>
@@ -149,16 +164,16 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
                     [icon]="isOpen ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" [attr.aria-expanded]="isOpen"
                     (onClick)="toggleDetails(a.activityInstanceId)" />
                 </td>
-                <td><span class="mono">{{ a.activityId }}</span> @if (stepName(a.activityId); as nm) { <span class="text-muted-color">{{ nm }}</span> }</td>
-                <td>@if (typeOf(a); as ty) { <p-tag [value]="ty" severity="secondary" /> }</td>
-                <td><app-status-badge [look]="actLook(statusOf(a))" [text]="a.status" /></td>
-                <td class="nowrap">{{ (a.start || a.creation) | dateTime }}</td>
-                <td class="nowrap">{{ a.finish | dateTime }}</td>
+                @if (stepCol('activityId')) { <td><span class="mono">{{ a.activityId }}</span> @if (stepName(a.activityId); as nm) { <span class="text-muted-color">{{ nm }}</span> }</td> }
+                @if (stepCol('taskType')) { <td>@if (typeOf(a); as ty) { <p-tag [value]="ty" severity="secondary" /> }</td> }
+                @if (stepCol('status')) { <td><app-status-badge [look]="actLook(statusOf(a))" [text]="a.status" /></td> }
+                @if (stepCol('start')) { <td class="nowrap">{{ (a.start || a.creation) | dateTime }}</td> }
+                @if (stepCol('finish')) { <td class="nowrap">{{ a.finish | dateTime }}</td> }
               </tr>
             </ng-template>
             <ng-template #expandedrow let-a>
               <tr>
-                <td colspan="6">
+                <td [attr.colspan]="stepVisible().length + 1">
                   @if (stepError()) {
                     <p-message severity="error" [text]="stepError()!" />
                   }
@@ -181,7 +196,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
               </tr>
             </ng-template>
             <ng-template #emptymessage>
-              <tr><td colspan="6">No steps have run yet.</td></tr>
+              <tr><td [attr.colspan]="stepVisible().length + 1">No steps have run yet.</td></tr>
             </ng-template>
           </p-table>
         }
@@ -290,6 +305,16 @@ export class InstanceDetailComponent implements OnInit {
   readonly diagram = signal<InstanceDiagram | null>(null);
   readonly activities = signal<StepRow[]>([]);
   readonly stepTotal = signal(0);
+  readonly stepSortField = signal<string | null>(null);
+  readonly stepSortOrder = signal(1);
+  readonly stepColumns: ToolColumn[] = [
+    { field: 'activityId', header: 'Step' },
+    { field: 'taskType', header: 'Type' },
+    { field: 'status', header: 'Status' },
+    { field: 'start', header: 'Started' },
+    { field: 'finish', header: 'Finished' }
+  ];
+  readonly stepVisible = signal<string[]>(this.stepColumns.map(c => c.field));
   readonly stepPage = signal(0);
   readonly stepSize = signal(50);
   readonly requests = signal<RequestRow[]>([]);
@@ -410,9 +435,35 @@ export class InstanceDetailComponent implements OnInit {
     this.loadSteps(Math.floor(e.first / e.rows), e.rows);
   }
 
+  stepCol(field: string): boolean {
+    return this.stepVisible().includes(field);
+  }
+
+  onStepsSort(e: { field: string; order: number }): void {
+    this.stepSortField.set(e.field);
+    this.stepSortOrder.set(e.order);
+    this.loadSteps(0, this.stepSize());
+  }
+
+  clearStepSort(): void {
+    this.stepSortField.set(null);
+    this.stepSortOrder.set(1);
+    this.loadSteps(0, this.stepSize());
+  }
+
+  exportSteps(): void {
+    downloadCsv(`instance-${this.id}-steps`, [
+      { field: 'activityInstanceId', header: 'Activity instance' }, { field: 'activityId', header: 'Step' },
+      { field: 'taskType', header: 'Task type' }, { field: 'status', header: 'Status' },
+      { field: 'creation', header: 'Created' }, { field: 'start', header: 'Started' },
+      { field: 'finish', header: 'Finished' }
+    ], this.activities());
+  }
+
   loadSteps(page: number, size: number): void {
     this.openStep.set(null);
-    this.api.activities(this.id, page, size).subscribe({
+    this.api.activities(this.id, page, size, undefined, this.stepSortField() ?? undefined,
+      this.stepSortOrder() < 0 ? 'desc' : 'asc').subscribe({
       next: p => {
         this.activities.set(p.items);
         this.stepTotal.set(p.total);

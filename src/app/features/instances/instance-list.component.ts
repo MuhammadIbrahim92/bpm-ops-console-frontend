@@ -11,14 +11,16 @@ import { ApiService, InstanceQuery } from '../../core/api.service';
 import { describeError } from '../../core/errors';
 import { InstanceSummary, Lookups } from '../../core/models';
 import { instanceLook } from '../../core/status';
+import { downloadCsv } from '../../shared/csv';
 import { AgePipe, DateTimePipe } from '../../shared/pipes';
 import { StatusBadgeComponent } from '../../shared/status-badge.component';
+import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
 
 @Component({
   selector: 'app-instance-list',
   standalone: true,
   imports: [FormsModule, RouterLink, ButtonModule, CheckboxModule, InputTextModule, MessageModule, SelectModule,
-    TableModule, StatusBadgeComponent, DateTimePipe, AgePipe],
+    TableModule, StatusBadgeComponent, TableToolsComponent, DateTimePipe, AgePipe],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1">Instances</div>
@@ -38,6 +40,10 @@ import { StatusBadgeComponent } from '../../shared/status-badge.component';
           <label for="processId">Process</label>
           <p-select inputId="processId" name="processId" [(ngModel)]="f.processId" [options]="lookups()?.processes ?? []"
             optionLabel="name" optionValue="id" placeholder="All processes" [showClear]="true" [filter]="true" fluid />
+        </div>
+        <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
+          <label for="createdBy">Created by</label>
+          <input pInputText id="createdBy" name="createdBy" [(ngModel)]="f.createdBy" placeholder="login" fluid />
         </div>
         <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
           <label for="from">Created from</label>
@@ -64,31 +70,44 @@ import { StatusBadgeComponent } from '../../shared/status-badge.component';
 
     <div class="card">
       @if (error()) { <p-message severity="error" [text]="error()!" styleClass="mb-4" /> }
+      <app-table-tools [columns]="columns" [visible]="visible()" (visibleChange)="visible.set($event)" [search]="false"
+        note="Click a column title to sort the whole result. Export covers this page." (exportCsv)="export()" (clear)="reset()" />
       <p-table [value]="items()" dataKey="id" [lazy]="true" [loading]="loading()" [paginator]="true" [rows]="size()"
         [first]="page() * size()" [totalRecords]="total()" [rowsPerPageOptions]="[25, 50, 100, 200]"
         [showCurrentPageReport]="true" currentPageReportTemplate="{first} to {last} of {totalRecords} instances"
-        [rowHover]="true" [tableStyle]="{ 'min-width': '60rem' }" (onPage)="onPage($event)">
+        [sortField]="sortField() ?? undefined" [sortOrder]="sortOrder()" [resizableColumns]="true" columnResizeMode="expand"
+        [stripedRows]="true" [rowHover]="true" [scrollable]="true" [tableStyle]="{ 'min-width': '60rem' }"
+        (onPage)="onPage($event)" (onSort)="onSort($event)">
         <ng-template #header>
           <tr>
-            <th>Id</th><th>Name</th><th>Process</th><th>Status</th>
-            <th class="text-right">Running</th><th class="text-right">Failed</th><th>Created</th><th>Open for</th><th>By</th>
+            @if (show('id')) { <th pSortableColumn="id" pResizableColumn>Id <p-sortIcon field="id" /></th> }
+            @if (show('name')) { <th pSortableColumn="name" pResizableColumn>Name <p-sortIcon field="name" /></th> }
+            @if (show('processName')) { <th pSortableColumn="process" pResizableColumn>Process <p-sortIcon field="process" /></th> }
+            @if (show('status')) { <th pSortableColumn="status" pResizableColumn>Status <p-sortIcon field="status" /></th> }
+            @if (show('runningActivities')) { <th class="text-right" pResizableColumn>Running</th> }
+            @if (show('failedActivities')) { <th class="text-right" pResizableColumn>Failed</th> }
+            @if (show('created')) { <th pSortableColumn="created" pResizableColumn>Created <p-sortIcon field="created" /></th> }
+            @if (show('finished')) { <th pSortableColumn="finished" pResizableColumn>Finished <p-sortIcon field="finished" /></th> }
+            @if (show('openFor')) { <th pResizableColumn>Open for</th> }
+            @if (show('createdBy')) { <th pSortableColumn="createdBy" pResizableColumn>By <p-sortIcon field="createdBy" /></th> }
           </tr>
         </ng-template>
         <ng-template #body let-i>
           <tr>
-            <td class="nowrap"><a [routerLink]="['/instances', i.id]">{{ i.id }}</a></td>
-            <td>{{ i.name }} @if (i.test) { <span class="text-muted-color">(test)</span> }</td>
-            <td>{{ i.processName }} <span class="text-muted-color">v{{ i.version }}</span></td>
-            <td><app-status-badge [look]="look(i.status)" [text]="i.status" /></td>
-            <td class="text-right">{{ i.runningActivities }}</td>
-            <td class="text-right">@if (i.failedActivities > 0) { <strong class="bad">{{ i.failedActivities }}</strong> } @else { 0 }</td>
-            <td class="nowrap">{{ i.created | dateTime }}</td>
-            <td class="nowrap">@if (!i.finished) { {{ i.created | age }} } @else { <span class="text-muted-color">finished</span> }</td>
-            <td>{{ i.createdBy }}</td>
+            @if (show('id')) { <td class="nowrap"><a [routerLink]="['/instances', i.id]">{{ i.id }}</a></td> }
+            @if (show('name')) { <td>{{ i.name }} @if (i.test) { <span class="text-muted-color">(test)</span> }</td> }
+            @if (show('processName')) { <td>{{ i.processName }} <span class="text-muted-color">v{{ i.version }}</span></td> }
+            @if (show('status')) { <td><app-status-badge [look]="look(i.status)" [text]="i.status" /></td> }
+            @if (show('runningActivities')) { <td class="text-right">{{ i.runningActivities }}</td> }
+            @if (show('failedActivities')) { <td class="text-right">@if (i.failedActivities > 0) { <strong class="bad">{{ i.failedActivities }}</strong> } @else { 0 }</td> }
+            @if (show('created')) { <td class="nowrap">{{ i.created | dateTime }}</td> }
+            @if (show('finished')) { <td class="nowrap">{{ i.finished | dateTime }}</td> }
+            @if (show('openFor')) { <td class="nowrap">@if (!i.finished) { {{ i.created | age }} } @else { <span class="text-muted-color">finished</span> }</td> }
+            @if (show('createdBy')) { <td>{{ i.createdBy }}</td> }
           </tr>
         </ng-template>
         <ng-template #emptymessage>
-          <tr><td colspan="9">No instances match.</td></tr>
+          <tr><td [attr.colspan]="visible().length || 1">No instances match.</td></tr>
         </ng-template>
       </p-table>
     </div>
@@ -102,17 +121,39 @@ export class InstanceListComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
+  readonly columns: ToolColumn[] = [
+    { field: 'id', header: 'Id' },
+    { field: 'name', header: 'Name' },
+    { field: 'processName', header: 'Process' },
+    { field: 'status', header: 'Status' },
+    { field: 'runningActivities', header: 'Running' },
+    { field: 'failedActivities', header: 'Failed' },
+    { field: 'created', header: 'Created' },
+    { field: 'finished', header: 'Finished' },
+    { field: 'openFor', header: 'Open for' },
+    { field: 'createdBy', header: 'By' }
+  ];
+  readonly visible = signal<string[]>(
+    this.columns.map(c => c.field).filter(f => f !== 'finished')
+  );
+
   readonly size = signal(50);
   readonly lookups = signal<Lookups | null>(null);
   readonly items = signal<InstanceSummary[]>([]);
   readonly total = signal(0);
   readonly page = signal(0);
+  readonly sortField = signal<string | null>(null);
+  readonly sortOrder = signal(1);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
   f = this.blank();
 
   look = instanceLook;
+
+  show(field: string): boolean {
+    return this.visible().includes(field);
+  }
 
   statusOptions(): { label: string; value: string }[] {
     return (this.lookups()?.instanceStatuses ?? []).map(s => ({ label: s, value: s }));
@@ -125,6 +166,7 @@ export class InstanceListComponent implements OnInit {
         text: q.get('text') ?? '',
         status: q.get('status') ?? '',
         processId: q.get('processId') ? Number(q.get('processId')) : null,
+        createdBy: q.get('createdBy') ?? '',
         from: q.get('from') ?? '',
         to: q.get('to') ?? '',
         olderThanHours: q.get('olderThanHours') ? Number(q.get('olderThanHours')) : null,
@@ -133,6 +175,8 @@ export class InstanceListComponent implements OnInit {
       this.page.set(q.get('page') ? Math.max(0, Number(q.get('page'))) : 0);
       const sz = Number(q.get('size'));
       this.size.set(sz >= 1 && sz <= 200 ? sz : 50);
+      this.sortField.set(q.get('sort'));
+      this.sortOrder.set(q.get('dir') === 'desc' ? -1 : 1);
       this.load();
     });
   }
@@ -143,11 +187,29 @@ export class InstanceListComponent implements OnInit {
 
   reset(): void {
     this.f = this.blank();
+    this.sortField.set(null);
+    this.sortOrder.set(1);
     this.navigate(0, this.size());
   }
 
   onPage(e: TablePageEvent): void {
     this.navigate(Math.floor(e.first / e.rows), e.rows);
+  }
+
+  onSort(e: { field: string; order: number }): void {
+    this.sortField.set(e.field);
+    this.sortOrder.set(e.order);
+    this.navigate(0, this.size());
+  }
+
+  export(): void {
+    downloadCsv('instances', [
+      { field: 'id', header: 'Id' }, { field: 'name', header: 'Name' }, { field: 'processName', header: 'Process' },
+      { field: 'version', header: 'Version' }, { field: 'status', header: 'Status' },
+      { field: 'runningActivities', header: 'Running steps' }, { field: 'failedActivities', header: 'Failed steps' },
+      { field: 'created', header: 'Created' }, { field: 'finished', header: 'Finished' },
+      { field: 'createdBy', header: 'Created by' }, { field: 'test', header: 'Test' }
+    ], this.items());
   }
 
   private navigate(page: number, size: number): void {
@@ -157,10 +219,13 @@ export class InstanceListComponent implements OnInit {
         text: f.text || null,
         status: f.status || null,
         processId: f.processId,
+        createdBy: f.createdBy || null,
         from: f.from || null,
         to: f.to || null,
         olderThanHours: f.olderThanHours,
         includeTest: f.includeTest ? 'true' : null,
+        sort: this.sortField(),
+        dir: this.sortField() && this.sortOrder() < 0 ? 'desc' : null,
         page: page > 0 ? page : null,
         size: size !== 50 ? size : null
       }
@@ -170,8 +235,9 @@ export class InstanceListComponent implements OnInit {
   private load(): void {
     const f = this.f;
     const q: InstanceQuery = {
-      text: f.text, status: f.status, processId: f.processId, from: f.from, to: f.to,
-      olderThanHours: f.olderThanHours, includeTest: f.includeTest, page: this.page(), size: this.size()
+      text: f.text, status: f.status, processId: f.processId, createdBy: f.createdBy, from: f.from, to: f.to,
+      olderThanHours: f.olderThanHours, includeTest: f.includeTest, page: this.page(), size: this.size(),
+      sort: this.sortField() ?? undefined, dir: this.sortOrder() < 0 ? 'desc' : 'asc'
     };
     this.loading.set(true);
     this.error.set(null);
@@ -183,7 +249,7 @@ export class InstanceListComponent implements OnInit {
 
   private blank() {
     return {
-      text: '', status: '', processId: null as number | null, from: '', to: '',
+      text: '', status: '', processId: null as number | null, createdBy: '', from: '', to: '',
       olderThanHours: null as number | null, includeTest: false
     };
   }
