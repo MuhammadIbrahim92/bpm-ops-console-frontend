@@ -46,8 +46,10 @@ export function requestLook(status: string | null | undefined): StatusLook {
     case 'QUEUED':
       return LOOKS.PENDING;
     case 'FETCHED':
+    case 'RUNNING':
       return LOOKS.RUNNING;
     case 'COMPLETED':
+    case 'FINISHED':
     case 'CLOSED':
       return LOOKS.COMPLETED;
     case 'REQUEST TIMEOUT':

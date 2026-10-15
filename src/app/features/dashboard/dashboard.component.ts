@@ -84,7 +84,7 @@ interface Tile {
     @if (auth.can('VIEW_INSTANCES')) {
       <p class="mt-4">
         <a routerLink="/instances">Browse all instances</a>
-        &middot; <a routerLink="/instances" [queryParams]="{ olderThanHours: 24 }">Open for more than a day</a>
+        &middot; <a routerLink="/instances" [queryParams]="{ olderThanHours: 24, includeTest: 'true' }">Open for more than a day</a>
         @if (longOpen() !== null) { <span class="text-muted-color">({{ longOpen() }})</span> }
       </p>
     }
@@ -125,7 +125,7 @@ export class DashboardComponent implements OnInit {
       this.loading.set(false);
     }
     if (this.auth.can('VIEW_INSTANCES')) {
-      this.api.instances({ olderThanHours: 24, size: 1 }).subscribe({
+      this.api.instances({ olderThanHours: 24, size: 1, includeTest: true }).subscribe({
         next: page => this.longOpen.set(page.total),
         error: () => this.longOpen.set(null)
       });

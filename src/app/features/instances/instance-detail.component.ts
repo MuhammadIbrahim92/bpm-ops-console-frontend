@@ -165,7 +165,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
                     [icon]="isOpen ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" [attr.aria-expanded]="isOpen"
                     (onClick)="toggleDetails(a.activityInstanceId)" />
                 </td>
-                @if (stepCol('activityId')) { <td><span class="mono">{{ a.activityId }}</span> @if (stepName(a.activityId); as nm) { <span class="text-muted-color">{{ nm }}</span> }</td> }
+                @if (stepCol('activityId')) { <td><span class="mono">{{ a.activityId }}</span> @if (stepName(a.activityId); as nm) { <span class="text-muted-color ml-2">{{ nm }}</span> }</td> }
                 @if (stepCol('taskType')) { <td>@if (typeOf(a); as ty) { <p-tag [value]="ty" severity="secondary" /> }</td> }
                 @if (stepCol('status')) { <td><app-status-badge [look]="actLook(statusOf(a))" [text]="a.status" /></td> }
                 @if (stepCol('requestUuid')) { <td class="mono">{{ isService(a) ? (a.requestUuid || '-') : '' }}</td> }

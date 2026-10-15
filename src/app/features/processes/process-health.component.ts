@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -16,7 +17,7 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
 @Component({
   selector: 'app-process-health',
   standalone: true,
-  imports: [FormsModule, ButtonModule, InputTextModule, MessageModule, ProgressBarModule, SelectModule, TableModule, TableToolsComponent, DurationPipe],
+  imports: [FormsModule, ButtonModule, CheckboxModule, InputTextModule, MessageModule, ProgressBarModule, SelectModule, TableModule, TableToolsComponent, DurationPipe],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1">Process health</div>
@@ -35,6 +36,10 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
         <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
           <label for="days">Period</label>
           <p-select inputId="days" name="days" [(ngModel)]="days" [options]="periods" optionLabel="label" optionValue="value" fluid />
+        </div>
+        <div class="col-span-12 md:col-span-3 flex items-center gap-2 pb-2">
+          <p-checkbox inputId="test" name="test" [(ngModel)]="includeTest" [binary]="true" />
+          <label for="test">Include test instances</label>
         </div>
         <div class="col-span-12 md:col-span-2">
           <p-button type="submit" label="Show" icon="pi pi-chart-bar" [disabled]="processId === null || loading()" />
@@ -138,6 +143,7 @@ export class ProcessHealthComponent implements OnInit {
   processId: number | null = null;
   version = '';
   days = 30;
+  includeTest = false;
 
   private readonly maxAvg = computed(() => Math.max(1, ...this.stats().map(s => s.avgSeconds ?? 0)));
 
@@ -155,7 +161,7 @@ export class ProcessHealthComponent implements OnInit {
     }
     this.loading.set(true);
     this.error.set(null);
-    this.api.bottlenecks(this.processId, this.days, this.version.trim() || undefined).subscribe({
+    this.api.bottlenecks(this.processId, this.days, this.version.trim() || undefined, this.includeTest).subscribe({
       next: s => { this.stats.set(s); this.loaded.set(true); this.loading.set(false); },
       error: e => { this.error.set(describeError(e)); this.loading.set(false); }
     });

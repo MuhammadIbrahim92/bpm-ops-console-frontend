@@ -104,9 +104,9 @@ export class ApiService {
     return this.http.get<Issue[]>(`${this.base}/issues`, { params: toParams({ type, limit }) });
   }
 
-  bottlenecks(processId: number, days: number, version?: string): Observable<ActivityStat[]> {
+  bottlenecks(processId: number, days: number, version?: string, includeTest = false): Observable<ActivityStat[]> {
     return this.http.get<ActivityStat[]>(`${this.base}/processes/${processId}/bottlenecks`, {
-      params: toParams({ days, version })
+      params: toParams({ days, version, includeTest: includeTest ? 'true' : '' })
     });
   }
 
