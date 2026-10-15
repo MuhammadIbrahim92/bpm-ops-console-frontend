@@ -1,5 +1,11 @@
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { MessageModule } from 'primeng/message';
+import { TableModule, TablePageEvent } from 'primeng/table';
+import { TabsModule } from 'primeng/tabs';
+import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
@@ -19,57 +25,61 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
 @Component({
   selector: 'app-instance-detail',
   standalone: true,
-  imports: [RequestTablesComponent, PagerComponent, AttributeSectionsComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
+  imports: [ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
   template: `
-    <div class="page">
-      <p><a routerLink="/instances">&larr; All instances</a></p>
+    <div class="mb-4">
+      <p-button label="All instances" icon="pi pi-arrow-left" [text]="true" routerLink="/instances" />
+    </div>
 
-      @if (error()) { <p class="alert" role="alert">{{ error() }}</p> }
+    @if (error()) { <p-message severity="error" [text]="error()!" styleClass="mb-4" /> }
 
-      @if (instance(); as i) {
-        <div class="head card">
+    @if (instance(); as i) {
+      <div class="card">
+        <div class="flex flex-wrap justify-between gap-4">
           <div>
-            <h1>{{ i.name || 'Instance ' + i.id }}</h1>
-            <p class="sub">#{{ i.id }} &middot; {{ i.processName }} <span class="mono">v{{ i.version }}</span> @if (i.test) { &middot; test instance }</p>
+            <div class="font-semibold text-2xl">{{ i.name || 'Instance ' + i.id }}</div>
+            <p class="text-muted-color mt-1">#{{ i.id }} &middot; {{ i.processName }} <span class="mono">v{{ i.version }}</span> @if (i.test) { &middot; test instance }</p>
           </div>
           <dl class="facts">
             <div><dt>Status</dt><dd><app-status-badge [look]="instLook(i.status)" [text]="i.status" /></dd></div>
-            <div><dt>Started</dt><dd>{{ i.created | dateTime }} <span class="muted">by {{ i.createdBy }}</span></dd></div>
+            <div><dt>Started</dt><dd>{{ i.created | dateTime }} <span class="text-muted-color">by {{ i.createdBy }}</span></dd></div>
             <div><dt>{{ i.finished ? 'Finished' : 'Open for' }}</dt><dd>@if (i.finished) { {{ i.finished | dateTime }} } @else { {{ i.created | age }} }</dd></div>
             <div><dt>Running steps</dt><dd>{{ i.runningActivities }}</dd></div>
             <div><dt>Failed steps</dt><dd [class.bad]="i.failedActivities > 0">{{ i.failedActivities }}</dd></div>
           </dl>
         </div>
+      </div>
 
-        <div class="tabs" role="tablist">
-          @if (auth.can('VIEW_DIAGRAM')) {
-            <button class="tab" role="tab" [attr.aria-selected]="tab() === 'diagram'" (click)="show('diagram')">Diagram</button>
-          }
-          <button class="tab" role="tab" [attr.aria-selected]="tab() === 'steps'" (click)="show('steps')">Steps</button>
-          <button class="tab" role="tab" [attr.aria-selected]="tab() === 'attributes'" (click)="show('attributes')">Attributes</button>
-          @if (auth.can('VIEW_INSTANCES')) {
-            <button class="tab" role="tab" [attr.aria-selected]="tab() === 'requests'" (click)="show('requests')">Engine requests</button>
-          }
-        </div>
+      <div class="card">
+        <p-tabs [value]="tab()" (valueChange)="show($any($event))">
+          <p-tablist>
+            @if (auth.can('VIEW_DIAGRAM')) { <p-tab value="diagram"><i class="pi pi-sitemap mr-2"></i>Diagram</p-tab> }
+            <p-tab value="steps"><i class="pi pi-list mr-2"></i>Steps</p-tab>
+            <p-tab value="attributes"><i class="pi pi-database mr-2"></i>Attributes</p-tab>
+            @if (auth.can('VIEW_INSTANCES')) { <p-tab value="requests"><i class="pi pi-clock mr-2"></i>Engine requests</p-tab> }
+          </p-tablist>
+        </p-tabs>
 
+        <div class="mt-4">
         @if (tab() === 'diagram') {
           @if (diagram(); as d) {
             @if (d.diagramError) {
-              <p class="note">{{ d.diagramError }} The steps below are still accurate.</p>
+              <p-message severity="warn" [text]="d.diagramError + ' The steps are still accurate.'" styleClass="mb-4" />
             }
             @if (d.overlay.unknownActivities.length > 0) {
-              <p class="note">This instance ran steps that are not on the stored drawing ({{ d.overlay.unknownActivities.join(', ') }}). The instance may have started on an older version of the process.</p>
+              <p-message severity="info" styleClass="mb-4"
+                [text]="'This instance ran steps that are not on the stored drawing (' + d.overlay.unknownActivities.join(', ') + '). The instance may have started on an older version of the process.'" />
             }
             @if (d.graph; as g) {
               <div class="split">
                 <app-diagram-view [graph]="g" [overlay]="d.overlay" [selectedId]="selectedId()" (selected)="onNode($event)" />
-                <aside class="card side" aria-live="polite">
+                <aside class="side" aria-live="polite">
                   @if (selectedNode(); as n) {
-                    <h2>{{ n.name || n.activityId }}</h2>
-                    <p class="mono muted">{{ n.activityId }}</p>
+                    <div class="font-semibold text-lg">{{ n.name || n.activityId }}</div>
+                    <p class="mono text-muted-color">{{ n.activityId }}</p>
                     @if (selectedState(); as s) {
-                      <p><app-status-badge [look]="actLook(s.status)" />
-                        @if (s.overdue) { <span class="badge st-failed">Overdue task</span> }</p>
+                      <p class="my-2"><app-status-badge [look]="actLook(s.status)" />
+                        @if (s.overdue) { <p-tag value="Overdue task" severity="danger" styleClass="ml-2" /> }</p>
                       <dl class="facts col">
                         <div><dt>Executions</dt><dd>{{ s.executions }} @if (s.failed > 0) { <span class="bad">({{ s.failed }} failed)</span> }</dd></div>
                         <div><dt>First started</dt><dd>{{ s.firstStart | dateTime }}</dd></div>
@@ -79,16 +89,16 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
                         @if (s.performers.length > 0) { <div><dt>With</dt><dd>{{ s.performers.join(', ') }}</dd></div> }
                       </dl>
                     } @else {
-                      <p class="muted">This instance has not reached this step.</p>
+                      <p class="text-muted-color">This instance has not reached this step.</p>
                     }
                   } @else {
-                    <p class="muted">Select a step on the diagram to see its history, who holds it and how long it has waited.</p>
+                    <p class="text-muted-color">Click a step on the diagram to see its attributes, saved forms and queue requests.</p>
                     @if (attention().length > 0) {
-                      <h2>Needs a look</h2>
+                      <div class="font-semibold mt-4 mb-2">Needs a look</div>
                       <ul class="plain">
                         @for (s of attention(); track s.activityId) {
-                          <li><button type="button" class="link" (click)="selectedId.set(s.activityId)">{{ nameOf(s.activityId) }}</button>
-                            <span class="muted"> &mdash; {{ actLook(s.status).label }}@if (s.overdue) {, overdue}</span></li>
+                          <li><a href="javascript:void(0)" (click)="onNode(s.activityId)">{{ nameOf(s.activityId) }}</a>
+                            <span class="text-muted-color"> &mdash; {{ actLook(s.status).label }}@if (s.overdue) {, overdue}</span></li>
                         }
                       </ul>
                     }
@@ -97,186 +107,178 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
               </div>
             }
           } @else if (!error()) {
-            <p class="empty" role="status">Loading the diagram&hellip;</p>
+            <p class="text-muted-color" role="status">Loading the diagram&hellip;</p>
           }
         }
 
         @if (tab() === 'steps') {
-          <div class="card">
-            <div class="start-form">
-              <button type="button" class="btn small" (click)="toggleStartForm()">{{ startOpen() ? 'Hide start form' : 'Start form' }}</button>
-              <span class="muted">The form the start event collected.</span>
-              @if (startOpen()) {
-                @if (startFormError()) {
-                  <p class="note" role="status">{{ startFormError() }}</p>
-                }
-                @if (startForm(); as sf) {
-                  <h3>Start form <span class="muted">@if (sf.createdBy) { by {{ sf.createdBy }} } @if (sf.created) { , {{ sf.created | dateTime }} }</span></h3>
-                  <app-saved-html [html]="sf.html" />
-                } @else if (!startFormError()) {
-                  <p class="muted">Loading…</p>
-                }
+          <div class="mb-4">
+            <p-button type="button" [label]="startOpen() ? 'Hide start form' : 'Start form'" icon="pi pi-file" severity="secondary"
+              [outlined]="true" size="small" (onClick)="toggleStartForm()" />
+            <span class="text-muted-color ml-2">The form the start event collected.</span>
+            @if (startOpen()) {
+              @if (startFormError()) {
+                <p-message severity="info" [text]="startFormError()!" styleClass="mt-3" />
               }
-            </div>
-
-            @if (typesOnPage().length > 0) {
-              <p class="legend muted">Step types on this page:
-                @for (t of typesOnPage(); track t) { <span class="type-tag">{{ t }}</span> }
-              </p>
+              @if (startForm(); as sf) {
+                <div class="font-semibold mt-3 mb-2">Start form <span class="text-muted-color font-normal">@if (sf.createdBy) { by {{ sf.createdBy }} } @if (sf.created) { , {{ sf.created | dateTime }} }</span></div>
+                <app-saved-html [html]="sf.html" />
+              } @else if (!startFormError()) {
+                <p class="text-muted-color mt-3">Loading…</p>
+              }
             }
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Step</th><th>Type</th><th>Status</th><th>Started</th><th>Finished</th><th></th></tr></thead>
-                <tbody>
-                  @for (a of activities(); track a.activityInstanceId) {
-                    <tr>
-                      <td><span class="mono">{{ a.activityId }}</span> @if (stepName(a.activityId); as nm) { <span class="muted">{{ nm }}</span> }</td>
-                      <td>@if (typeOf(a); as ty) { <span class="type-tag">{{ ty }}</span> }</td>
-                      <td><app-status-badge [look]="actLook(statusOf(a))" [text]="a.status" /></td>
-                      <td class="nowrap">{{ (a.start || a.creation) | dateTime }}</td>
-                      <td class="nowrap">{{ a.finish | dateTime }}</td>
-                      <td><button type="button" class="btn small" (click)="toggleDetails(a.activityInstanceId)">{{ openStep() === a.activityInstanceId ? 'Hide details' : 'Details' }}</button></td>
-                    </tr>
-                    @if (openStep() === a.activityInstanceId) {
-                      <tr>
-                        <td colspan="6">
-                          @if (stepError()) {
-                            <p class="note" role="alert">{{ stepError() }}</p>
-                          }
-                          @if (stepAttributes(); as pg) {
-                            <h3>Attributes of this step</h3>
-                            <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
-                            @if (pg.total > pg.size || pg.page > 0) {
-                              <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
-                                [sizes]="[25, 50, 100, 200]" (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
-                            }
-                          } @else if (!stepError()) {
-                            <p class="muted">Loading…</p>
-                          }
-                          @for (w of stepForms(); track w.workItemId) {
-                            <h3>Saved form: {{ w.name || 'work item ' + w.workItemId }}
-                              <span class="muted">{{ w.status }}@if (w.finishedBy || w.assignedUser) { , by {{ w.finishedBy || w.assignedUser }} }@if (w.endDate) { , {{ w.endDate | dateTime }} }</span></h3>
-                            <app-saved-html [html]="w.html" />
-                          }
-                        </td>
-                      </tr>
-                    }
-                  }
-                </tbody>
-              </table>
-            </div>
-            @if (activities().length === 0) { <p class="empty">No steps have run yet.</p> }
-            <app-pager [total]="stepTotal()" [page]="stepPage()" [size]="stepSize()" noun="steps"
-              (pageChange)="loadSteps($event, stepSize())" (sizeChange)="loadSteps(0, $event)" />
           </div>
+
+          @if (typesOnPage().length > 0) {
+            <p class="text-muted-color mb-2">Step types on this page:
+              @for (t of typesOnPage(); track t) { <p-tag [value]="t" severity="secondary" styleClass="mr-1" /> }
+            </p>
+          }
+
+          <p-table [value]="activities()" dataKey="activityInstanceId" [lazy]="true" [paginator]="true" [rows]="stepSize()"
+            [first]="stepPage() * stepSize()" [totalRecords]="stepTotal()" [rowsPerPageOptions]="[25, 50, 100, 200]"
+            [showCurrentPageReport]="true" currentPageReportTemplate="{first} to {last} of {totalRecords} steps"
+            [expandedRowKeys]="stepExpanded()" [rowHover]="true" [tableStyle]="{ 'min-width': '50rem' }" (onPage)="onStepsPage($event)">
+            <ng-template #header>
+              <tr><th style="width: 3rem"></th><th>Step</th><th>Type</th><th>Status</th><th>Started</th><th>Finished</th></tr>
+            </ng-template>
+            <ng-template #body let-a let-isOpen="expanded">
+              <tr>
+                <td>
+                  <p-button type="button" [text]="true" [rounded]="true" severity="secondary" size="small"
+                    [icon]="isOpen ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" [attr.aria-expanded]="isOpen"
+                    (onClick)="toggleDetails(a.activityInstanceId)" />
+                </td>
+                <td><span class="mono">{{ a.activityId }}</span> @if (stepName(a.activityId); as nm) { <span class="text-muted-color">{{ nm }}</span> }</td>
+                <td>@if (typeOf(a); as ty) { <p-tag [value]="ty" severity="secondary" /> }</td>
+                <td><app-status-badge [look]="actLook(statusOf(a))" [text]="a.status" /></td>
+                <td class="nowrap">{{ (a.start || a.creation) | dateTime }}</td>
+                <td class="nowrap">{{ a.finish | dateTime }}</td>
+              </tr>
+            </ng-template>
+            <ng-template #expandedrow let-a>
+              <tr>
+                <td colspan="6">
+                  @if (stepError()) {
+                    <p-message severity="error" [text]="stepError()!" />
+                  }
+                  @if (stepAttributes(); as pg) {
+                    <div class="font-semibold mb-2">Attributes of this step</div>
+                    <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
+                    @if (pg.total > pg.size || pg.page > 0) {
+                      <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
+                        (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
+                    }
+                  } @else if (!stepError()) {
+                    <p class="text-muted-color">Loading…</p>
+                  }
+                  @for (w of stepForms(); track w.workItemId) {
+                    <div class="font-semibold mt-4 mb-2">Saved form: {{ w.name || 'work item ' + w.workItemId }}
+                      <span class="text-muted-color font-normal">{{ w.status }}@if (w.finishedBy || w.assignedUser) { , by {{ w.finishedBy || w.assignedUser }} }@if (w.endDate) { , {{ w.endDate | dateTime }} }</span></div>
+                    <app-saved-html [html]="w.html" />
+                  }
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr><td colspan="6">No steps have run yet.</td></tr>
+            </ng-template>
+          </p-table>
         }
 
         @if (tab() === 'attributes') {
-          <div class="card">
-            <p class="muted">Current attributes of this process instance, grouped by data object.</p>
-            @if (processAttributes(); as pg) {
-              <app-attribute-sections [sections]="pg.sections" emptyText="This instance has no attributes." />
-              <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
-                (pageChange)="loadAttributes($event, pg.size)" (sizeChange)="loadAttributes(0, $event)" />
-            } @else {
-              <p class="muted">Loading…</p>
-            }
-          </div>
-        }
-
-        @if (popup(); as pu) {
-          <div class="backdrop" (click)="closePopup()"></div>
-          <div class="dialog card" role="dialog" aria-modal="true" [attr.aria-label]="pu.name" tabindex="-1" (keydown.escape)="closePopup()">
-            <div class="dialog-head">
-              <h2>{{ pu.name }} @if (pu.type) { <span class="type-tag">{{ pu.type }}</span> } <span class="mono muted">{{ pu.activityId }}</span></h2>
-              <button type="button" class="btn small" (click)="closePopup()" aria-label="Close">Close</button>
-            </div>
-            <div class="dialog-body">
-              @if (pu.isStart) {
-                @if (startFormError()) {
-                  <p class="note" role="status">{{ startFormError() }}</p>
-                }
-                @if (startForm(); as sf) {
-                  <h3>Start form <span class="muted">@if (sf.createdBy) { by {{ sf.createdBy }} } @if (sf.created) { , {{ sf.created | dateTime }} }</span></h3>
-                  <app-saved-html [html]="sf.html" />
-                } @else if (!startFormError()) {
-                  <p class="muted">Loading…</p>
-                }
-              }
-              @if (popupLoading()) {
-                <p class="muted">Loading…</p>
-              } @else if (popupSteps().length === 0 && !pu.isStart) {
-                <p class="empty">This step has not run in this instance.</p>
-              }
-              @if (popupSteps().length > 1) {
-                <label class="exec">Execution
-                  <select (change)="pickExecution($event)">
-                    @for (e of popupSteps(); track e.activityInstanceId; let i = $index) {
-                      <option [value]="e.activityInstanceId" [selected]="e.activityInstanceId === openStep()">#{{ i + 1 }} · {{ e.status }} · {{ (e.start || e.creation) | dateTime }}</option>
-                    }
-                  </select>
-                </label>
-              }
-              @if (openStep() !== null) {
-                @if (stepError()) {
-                  <p class="note" role="alert">{{ stepError() }}</p>
-                }
-                @if (stepAttributes(); as pg) {
-                  <h3>Attributes</h3>
-                  <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
-                  @if (pg.total > pg.size || pg.page > 0) {
-                    <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
-                      (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
-                  }
-                } @else if (!stepError()) {
-                  <p class="muted">Loading…</p>
-                }
-                @for (w of stepForms(); track w.workItemId) {
-                  <h3>Saved form: {{ w.name || 'work item ' + w.workItemId }}
-                    <span class="muted">{{ w.status }}@if (w.finishedBy || w.assignedUser) { , by {{ w.finishedBy || w.assignedUser }} }@if (w.endDate) { , {{ w.endDate | dateTime }} }</span></h3>
-                  <app-saved-html [html]="w.html" />
-                }
-              }
-              @if (auth.can('VIEW_INSTANCES')) {
-                <app-request-tables [requests]="popupRequests()" [timers]="popupTimers()" [allowRetry]="auth.can('RETRY_REQUEST')" (retried)="replaceRequest($event)" />
-              }
-            </div>
-          </div>
+          <p class="text-muted-color mb-4">Current attributes of this process instance, grouped by data object.</p>
+          @if (processAttributes(); as pg) {
+            <app-attribute-sections [sections]="pg.sections" emptyText="This instance has no attributes." />
+            <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
+              (pageChange)="loadAttributes($event, pg.size)" (sizeChange)="loadAttributes(0, $event)" />
+          } @else {
+            <p class="text-muted-color">Loading…</p>
+          }
         }
 
         @if (tab() === 'requests') {
-          <div class="card">
-            <p class="muted">Engine and timer requests of this instance. Retrying an engine request puts it back in the queue; the engine picks it up again.</p>
-            <app-request-tables [requests]="requests()" [timers]="timers()" [allowRetry]="auth.can('RETRY_REQUEST')" (retried)="replaceRequest($event)" />
-          </div>
+          <p class="text-muted-color mb-4">Engine and timer requests of this instance. Retrying an engine request puts it back in the queue; the engine picks it up again.</p>
+          <app-request-tables [requests]="requests()" [timers]="timers()" [allowRetry]="auth.can('RETRY_REQUEST')" (retried)="replaceRequest($event)" />
         }
-      }
-    </div>
-  `,
+        </div>
+      </div>
+
+      <p-dialog [visible]="popup() !== null" (visibleChange)="$event ? null : closePopup()" [modal]="true" [dismissableMask]="true"
+        [draggable]="false" [style]="{ width: '64rem', 'max-width': '95vw' }" [contentStyle]="{ 'max-height': '75vh' }">
+        <ng-template #header>
+          @if (popup(); as pu) {
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-semibold text-lg">{{ pu.name }}</span>
+              @if (pu.type) { <p-tag [value]="pu.type" severity="secondary" /> }
+              <span class="mono text-muted-color">{{ pu.activityId }}</span>
+            </div>
+          }
+        </ng-template>
+        @if (popup(); as pu) {
+          @if (pu.isStart) {
+            @if (startFormError()) {
+              <p-message severity="info" [text]="startFormError()!" styleClass="mb-3" />
+            }
+            @if (startForm(); as sf) {
+              <div class="font-semibold mb-2">Start form <span class="text-muted-color font-normal">@if (sf.createdBy) { by {{ sf.createdBy }} } @if (sf.created) { , {{ sf.created | dateTime }} }</span></div>
+              <app-saved-html [html]="sf.html" />
+            } @else if (!startFormError()) {
+              <p class="text-muted-color">Loading…</p>
+            }
+          }
+          @if (popupLoading()) {
+            <p class="text-muted-color">Loading…</p>
+          } @else if (popupSteps().length === 0 && !pu.isStart) {
+            <p class="text-muted-color">This step has not run in this instance.</p>
+          }
+          @if (popupSteps().length > 1) {
+            <label class="flex items-center gap-2 mb-3 font-semibold">Execution
+              <select class="border border-surface rounded-border p-2 bg-surface-0 dark:bg-surface-900" (change)="pickExecution($event)">
+                @for (e of popupSteps(); track e.activityInstanceId; let ix = $index) {
+                  <option [value]="e.activityInstanceId" [selected]="e.activityInstanceId === openStep()">#{{ ix + 1 }} · {{ e.status }} · {{ (e.start || e.creation) | dateTime }}</option>
+                }
+              </select>
+            </label>
+          }
+          @if (openStep() !== null) {
+            @if (stepError()) {
+              <p-message severity="error" [text]="stepError()!" styleClass="mb-3" />
+            }
+            @if (stepAttributes(); as pg) {
+              <div class="font-semibold mb-2 mt-3">Attributes</div>
+              <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
+              @if (pg.total > pg.size || pg.page > 0) {
+                <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
+                  (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
+              }
+            } @else if (!stepError()) {
+              <p class="text-muted-color">Loading…</p>
+            }
+            @for (w of stepForms(); track w.workItemId) {
+              <div class="font-semibold mt-4 mb-2">Saved form: {{ w.name || 'work item ' + w.workItemId }}
+                <span class="text-muted-color font-normal">{{ w.status }}@if (w.finishedBy || w.assignedUser) { , by {{ w.finishedBy || w.assignedUser }} }@if (w.endDate) { , {{ w.endDate | dateTime }} }</span></div>
+              <app-saved-html [html]="w.html" />
+            }
+          }
+          @if (auth.can('VIEW_INSTANCES')) {
+            <app-request-tables [requests]="popupRequests()" [timers]="popupTimers()" [allowRetry]="auth.can('RETRY_REQUEST')" (retried)="replaceRequest($event)" />
+          }
+        }
+      </p-dialog>
+    }
+`,
   styles: [`
-    .head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
     .facts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; }
     .facts.col { flex-direction: column; gap: 6px; }
     .facts div { min-width: 90px; }
     dt { font-size: 12px; color: var(--muted); font-weight: 600; }
     dd { margin: 0; }
     .bad { color: var(--c-failed); font-weight: 700; }
-    .split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+    .split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
     @media (max-width: 960px) { .split { grid-template-columns: 1fr; } }
-    .side h2 { margin-bottom: 2px; }
     ul.plain { list-style: none; padding: 0; margin: 0; }
     ul.plain li { padding: 3px 0; }
-    .start-form { margin-bottom: 12px; }
-    .backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 50; }
-    .dialog { position: fixed; z-index: 51; top: 5vh; left: 50%; transform: translateX(-50%); width: min(960px, 94vw); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
-    .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .dialog-head h2 { margin: 0; font-size: 16px; }
-    .dialog-body { overflow: auto; margin-top: 8px; }
-    .exec { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 600; }
-    .legend { margin: 4px 0 8px; }
-    .type-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin-right: 4px; white-space: nowrap; }
-    .link { font: inherit; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-align: left; }
-    .link:hover { text-decoration: underline; }
   `]
 })
 export class InstanceDetailComponent implements OnInit {
@@ -326,6 +328,11 @@ export class InstanceDetailComponent implements OnInit {
       return [];
     }
     return this.timers().filter(r => r.activityId === pu.activityId || (r.activityInstanceId != null && ids.has(r.activityInstanceId)));
+  });
+  /** Row expansion state for the steps table: the step whose details are open. */
+  readonly stepExpanded = computed<Record<string, boolean>>(() => {
+    const open = this.openStep();
+    return open === null || this.popup() !== null ? {} : { [open]: true };
   });
   readonly typesOnPage = computed<string[]>(() =>
     Array.from(new Set(this.activities().map(a => this.typeOf(a)).filter(t => t !== ''))));
@@ -397,6 +404,10 @@ export class InstanceDetailComponent implements OnInit {
       case 'TIMEOUT': return 'TIMEOUT' as const;
       default: return 'UNKNOWN' as const;
     }
+  }
+
+  onStepsPage(e: TablePageEvent): void {
+    this.loadSteps(Math.floor(e.first / e.rows), e.rows);
   }
 
   loadSteps(page: number, size: number): void {

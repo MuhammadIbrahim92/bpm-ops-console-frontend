@@ -1,36 +1,42 @@
 import { Component, Input } from '@angular/core';
+import { PanelModule } from 'primeng/panel';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
 import { AttributeSection } from '../core/models';
 
-/** Attributes grouped by data object (DO_ID): one titled section per data object. */
+/** Attributes grouped by data object (DO_ID): one collapsible panel per data object. */
 @Component({
   selector: 'app-attribute-sections',
   standalone: true,
+  imports: [PanelModule, TableModule, TagModule],
   template: `
     @for (s of sections; track s.doId) {
-      <section class="attr-section">
-        <h3>{{ s.doName }} <span class="muted mono">DO {{ s.doId }}</span></h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Attribute</th><th>Type</th><th>Value</th></tr></thead>
-            <tbody>
-              @for (a of s.attributes; track $index) {
-                <tr>
-                  <td>{{ a.name }} @if (a.tabular) { <span class="muted">(table)</span> }</td>
-                  <td class="muted">{{ a.type }}</td>
-                  <td class="val">{{ a.value }}@if (a.value1) { <span class="muted"> / {{ a.value1 }}</span> }</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <p-panel [toggleable]="true" styleClass="mb-4">
+        <ng-template #header>
+          <div class="flex items-center gap-2">
+            <span class="font-semibold">{{ s.doName }}</span>
+            <p-tag [value]="'DO ' + s.doId" severity="secondary" />
+            <span class="text-muted-color text-sm">{{ s.attributes.length }} attributes</span>
+          </div>
+        </ng-template>
+        <p-table [value]="s.attributes" size="small" [rowHover]="true">
+          <ng-template #header>
+            <tr><th>Attribute</th><th>Type</th><th>Value</th></tr>
+          </ng-template>
+          <ng-template #body let-a>
+            <tr>
+              <td>{{ a.name }} @if (a.tabular) { <span class="text-muted-color">(table)</span> }</td>
+              <td class="text-muted-color">{{ a.type }}</td>
+              <td class="val">{{ a.value }}@if (a.value1) { <span class="text-muted-color"> / {{ a.value1 }}</span> }</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-panel>
     } @empty {
-      <p class="empty">{{ emptyText }}</p>
+      <p class="text-muted-color">{{ emptyText }}</p>
     }
   `,
   styles: [`
-    .attr-section { margin-bottom: 16px; }
-    h3 { margin: 0 0 6px; font-size: 14px; }
     .val { white-space: pre-wrap; word-break: break-word; }
   `]
 })
