@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth.service';
+import { LoginComponent } from './shared/login.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LoginComponent],
   template: `
     <header class="top">
       <div class="top-inner">
@@ -31,6 +32,7 @@ import { AuthService } from './core/auth.service';
               <span class="ops">Operations</span>
             }
           </span>
+          <button type="button" class="btn small" (click)="auth.logout()">Sign out</button>
         }
       </div>
     </header>
@@ -38,13 +40,7 @@ import { AuthService } from './core/auth.service';
       @if (auth.me()) {
         <router-outlet />
       } @else {
-        <div class="page">
-          <div class="card" role="alert">
-            <h1>You can't use the console yet</h1>
-            <p>{{ auth.error() ?? 'Loading…' }}</p>
-            <p class="muted">If you expected access, ask the platform team to give your account a console role.</p>
-          </div>
-        </div>
+        <app-login />
       }
     </main>
   `,

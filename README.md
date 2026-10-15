@@ -19,9 +19,10 @@ hides what the backend would refuse anyway.
 
 ## Sign-in
 
-None here. WebLogic's container login and session protect the whole WAR. If the session expires, an API call comes
-back as the login page and the app reloads so WebLogic shows the sign-in form again. POSTs (Retry) send the
-`X-XSRF-TOKEN` header from the `XSRF-TOKEN` cookie automatically.
+The app shows its own sign-in form. User name and password are posted to `POST api/auth/login`; the backend answers
+with a JWT that is kept in `sessionStorage` (cleared when the tab closes) and sent as `Authorization: Bearer ...` on
+every API call. A 401 from the backend (expired or rejected token) returns to the form. The password is configured in
+the backend (`console.security.default-password`).
 
 ## Develop
 
@@ -32,7 +33,7 @@ npm test           # Karma + Chrome headless
 npm run build      # dist/bpm-ops-console/browser
 ```
 
-For local work run the backend with `console.security.dev-user=<an SC_USERS user name>` (never on a shared server).
+For local work run the backend with `console.security.default-password` set, then sign in with an `SC_USERS` user name.
 
 ## Ship with the backend
 

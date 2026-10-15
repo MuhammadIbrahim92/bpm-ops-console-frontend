@@ -1,3 +1,4 @@
+import { PagerComponent } from '../../shared/pager.component';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -11,7 +12,7 @@ import { StatusBadgeComponent } from '../../shared/status-badge.component';
 @Component({
   selector: 'app-instance-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, StatusBadgeComponent, DateTimePipe, AgePipe],
+  imports: [PagerComponent, FormsModule, RouterLink, StatusBadgeComponent, DateTimePipe, AgePipe],
   template: `
     <div class="page">
       <h1>Instances</h1>
@@ -77,12 +78,7 @@ import { StatusBadgeComponent } from '../../shared/status-badge.component';
         @if (!loading() && items().length === 0) { <p class="empty">No instances match.</p> }
         @if (loading()) { <p class="empty" role="status">Loading&hellip;</p> }
 
-        <div class="pager">
-          <span>{{ total() }} found</span>
-          <button class="btn small" type="button" [disabled]="page() === 0" (click)="go(page() - 1)">Previous</button>
-          <span>Page {{ page() + 1 }} of {{ pages() }}</span>
-          <button class="btn small" type="button" [disabled]="page() + 1 >= pages()" (click)="go(page() + 1)">Next</button>
-        </div>
+        <app-pager [total]="total()" [page]="page()" [size]="size()" noun="found" (pageChange)="go($event)" (sizeChange)="setSize($event)" />
       </div>
     </div>
   `,
@@ -96,7 +92,7 @@ export class InstanceListComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly size = 50;
+  readonly size = signal(50);
   readonly lookups = signal<Lookups | null>(null);
   readonly items = signal<InstanceSummary[]>([]);
   readonly total = signal(0);
@@ -121,12 +117,10 @@ export class InstanceListComponent implements OnInit {
         includeTest: q.get('includeTest') === 'true'
       };
       this.page.set(q.get('page') ? Math.max(0, Number(q.get('page'))) : 0);
+      const sz = Number(q.get('size'));
+      this.size.set(sz >= 1 && sz <= 200 ? sz : 50);
       this.load();
     });
-  }
-
-  pages(): number {
-    return Math.max(1, Math.ceil(this.total() / this.size));
   }
 
   search(): void {
@@ -142,6 +136,11 @@ export class InstanceListComponent implements OnInit {
     this.navigate(page);
   }
 
+  setSize(size: number): void {
+    this.size.set(size);
+    this.navigate(0);
+  }
+
   private navigate(page: number): void {
     const f = this.f;
     this.router.navigate([], {
@@ -153,7 +152,8 @@ export class InstanceListComponent implements OnInit {
         to: f.to || null,
         olderThanHours: f.olderThanHours,
         includeTest: f.includeTest ? 'true' : null,
-        page: page > 0 ? page : null
+        page: page > 0 ? page : null,
+        size: this.size() !== 50 ? this.size() : null
       }
     });
   }
@@ -162,7 +162,7 @@ export class InstanceListComponent implements OnInit {
     const f = this.f;
     const q: InstanceQuery = {
       text: f.text, status: f.status, processId: f.processId, from: f.from, to: f.to,
-      olderThanHours: f.olderThanHours, includeTest: f.includeTest, page: this.page(), size: this.size
+      olderThanHours: f.olderThanHours, includeTest: f.includeTest, page: this.page(), size: this.size()
     };
     this.loading.set(true);
     this.error.set(null);

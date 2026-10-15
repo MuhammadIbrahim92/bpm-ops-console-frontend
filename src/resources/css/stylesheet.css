@@ -1,0 +1,1198 @@
+/* 22-3-2018 */
+/* .btn {
+    background-color: #4691A4 !important;
+}
+.btn-secondary{
+    background-color: #4691A4 !important;
+} */
+
+a{
+    text-decoration: none !important;
+}
+
+label{
+    font-weight: bold;
+    font-size: 15px;
+	overflow: hidden !important;
+}
+.form-style-9 input[type=submit]:disabled
+    {
+      pointer-events: none;
+     background-color:  #f0f5f5;
+    }
+	
+	.disabledBTN
+    {
+      pointer-events: none;
+     background-color:  #f0f5f5;
+    }
+div ~ table
+ {
+ overflow-x:scroll !important;
+} 
+table{
+    border: 0 !important;
+    /*text-align: center !important;*/
+    margin-bottom: 20px !important;
+	width:100% !important;
+	/*margin-top: -20px !important;*/
+	margin-left:15px;
+	margin-right:15px;
+
+  }
+  th{
+    font-size: 11px !important;
+    background-color: #f0f4fa !important;
+	padding:8px !important;
+	margin:15px;
+    color: #4f4f4f;
+    text-align: left !important;
+    border: 0 1px 0 0 solid black !important;
+	
+	
+  }
+  
+  tr{
+      border: 0 !important;
+	  	padding:4px !important;
+      /*height: 40px !important;*/
+	     text-align: left !important;
+  }
+
+  td{
+    border: 0 1px 0 0 solid black !important;
+    border-bottom: 2px solid #f0f4fa !important;
+		padding:4px !important;
+		   text-align: left !important;
+}
+
+
+  td:last-child {
+    width: auto;
+}
+  th label{
+    text-align: left !important;
+    color:black;
+	width: auto !important;
+	
+  }
+   th label:lang(ar){
+    text-align: right !important;
+    color:black;
+	width: auto !important;
+  }
+  tr td div{
+      height: 10% !important;
+	  font-size:14px;
+  }
+  
+  
+  td div .form-style-9 input[type=text]  {
+         width:90% !important;
+ }
+ 
+  td div{
+    /* display: flex !important;
+    flex-direction: column !important;
+      line-height: 8px;
+      white-space: nowrap;
+      height: fit-content !important; */
+	 text-align: left !important;
+	 /*padding-left: 5px;*/
+    }
+	
+	 td div:lang(ar){
+    /* display: flex !important;
+    flex-direction: column !important;
+      line-height: 8px;
+      white-space: nowrap;
+      height: fit-content !important; */
+   text-align: center !important;
+	 padding-right: 5px;
+    }
+
+.center{
+    margin-left: 300px;
+}
+
+.navbar{
+    background-color: #f8f8f8;
+	padding: 8px;
+}
+.navbar label{
+    color: #000;
+}
+.navbar input[type="submit"]{
+    border-top: 1px solid #B0CFE0 !important;
+    border-right: 1px solid #B0CFE0 !important;
+    border-bottom: 1px solid #B0CFE0 !important;
+    border-left: 1px solid #B0CFE0 !important;
+    border-radius: 3px !important;
+    color: #000 !important;
+	padding: 5px !important;
+}
+.navbar input[type="submit"]:hover{
+    background-color: #f1cd7e !important;
+    color: #000 !important;
+}
+input[type="text"]{
+    border-radius: 3px;
+    font-family: Tahoma, Verdana, Helvetica, sans-serif;
+    font-weight: normal;
+    font-size: 14px !important;
+    border-color: #DEE4E7;
+    border-style: solid;
+    border-width: 1px;
+    box-sizing: border-box;
+    border-radius: 3px;
+    background-color: #FAFDFF;
+    color: #333333;
+    border: 1px solid #DEE4E7;
+    padding: 1px 2px 1px 3px;
+    
+    width: 170px;
+    height: 30px !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+   margin-bottom: 3px !important; 
+   margin-top: 10px !important;
+}
+
+/*input[type="text"]:hover{
+    border-left: #076ab6 solid 3px !important;
+}*/
+
+
+
+input[type="number"]{
+    border-radius: 3px;
+    font-family: Tahoma, Verdana, Helvetica, sans-serif;
+    font-weight: normal;
+    font-size: 14px !important;
+    border-color: #DEE4E7;
+    border-style: solid;
+    border-width: 1px;
+    box-sizing: border-box;
+    border-radius: 3px;
+    background-color: #FAFDFF;
+    color: #333333;
+    border: 1px solid #DEE4E7;
+    padding: 1px 2px 1px 3px;
+    
+    width: 170px;
+    height: 30px !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+   margin-bottom: 3px !important; 
+   margin-top: 3px !important;
+    
+}
+
+/*input[type="number"]:hover{
+    border-left: #076ab6 solid 3px !important;
+}*/
+
+input[type="date"]{
+    border-radius: 3px;
+    font-family: Tahoma, Verdana, Helvetica, sans-serif;
+    font-weight: normal;
+    font-size: 14px !important;
+    border-color: #DEE4E7;
+    border-style: solid;
+    border-width: 1px;
+    box-sizing: border-box;
+    border-radius: 3px;
+    background-color: #FAFDFF;
+    color: #333333;
+    border: 1px solid #DEE4E7;
+    padding: 1px 2px 1px 3px;
+
+    width: 170px;
+    height: 30px !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+   margin-bottom: 3px !important; 
+   margin-top: 3px !important;
+    
+}
+
+/*input[type="date"]:hover{
+    border-left: #076ab6 solid 3px !important;
+}*/
+
+
+input[type="file"]{
+    border-radius: 3px;
+    font-family: Tahoma, Verdana, Helvetica, sans-serif;
+    font-weight: normal;
+    font-size: 14px;
+    border-color: #DEE4E7;
+    border-style: solid;
+    border-width: 1px;
+    box-sizing: border-box;
+    border-radius: 3px;
+    background-color: #FAFDFF;
+    color: #333333;
+    border: 1px solid #DEE4E7;
+    width: 170px;
+    height: 30px !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+   margin-bottom: 3px !important; 
+   margin-top: 3px !important;
+    
+}
+
+/* ----------------- */
+form{
+    width:98%;
+         padding: 10px;
+
+
+    }
+    header{
+    background-color: #4180C5;
+    text-align: center;
+    padding-top: 12px;
+    padding-bottom: 8px;
+    margin-top: -11px;
+    margin-bottom: -8px;
+    border-radius: 10px 10px 0 0;
+    color: aliceblue;
+    }
+    h3{
+  
+   /* 22-3-2018 */
+        background-color: #B0CFE0;
+    /* --------- */
+    text-align: left;
+     /* 22-3-2018 */
+    color: #ffffff !important;
+    padding: 8px;
+    margin-top: 25px !important;
+    font-size: 18px !important;
+	  border-radius: 5px;
+     /* --------- */
+    }
+    h1{
+    background-color: Green;
+    text-align: center;
+    color: aliceblue;
+    }
+    /* Makes responsive fields. Sets size and field alignment.*/
+    input[type=text]{
+    
+    
+    width:300px;
+    
+    
+    
+    }
+    .form-style-9{
+        background: #FAFAFA;
+       
+       /* box-shadow: 1px 1px 25px rgba(0, 0, 0, 0.35); */
+        border-radius: 10px;
+      /*  border: 6px solid #305A72; */
+    }
+    .form-style-9 ul{
+      
+        list-style:none;
+    }
+    .form-style-9 ul li{
+        display: block;
+      
+      
+    }
+      .form-style-9 input[type=file]{
+      width:33% !important;   
+        padding:0px;
+      display: inline-block;
+    }
+	input[type="file"] {
+  cursor: pointer !Important;
+}
+input[type="file"]::-webkit-file-upload-button {
+ border-top: 1px solid #B0CFE0 !important;
+    border-right: 1px solid #B0CFE0 !important;
+    border-bottom: 1px solid #B0CFE0 !important;
+    border-left: 1px solid #B0CFE0 !important;
+    border-radius: 3px !important;
+    background: #B0CFE0 !important;
+    color: white !important;
+	padding: 5px !important;
+}
+input[type="file"]::-ms-browse {
+ border-top: 1px solid #B0CFE0 !important;
+    border-right: 1px solid #B0CFE0 !important;
+    border-bottom: 1px solid #B0CFE0 !important;
+    border-left: 1px solid #B0CFE0 !important;
+    border-radius: 3px !important;
+    background: #B0CFE0 !important;
+    color: white !important;
+	padding: 5px !important;
+}
+
+
+    .form-style-9 ul li  .field-style{
+        box-sizing: border-box; 
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box; 
+        padding: 8px;
+        outline: none;
+        border: 1px solid #B0CFE0;
+        -webkit-transition: all 0.30s ease-in-out;
+        -moz-transition: all 0.30s ease-in-out;
+        -ms-transition: all 0.30s ease-in-out;
+        -o-transition: all 0.30s ease-in-out;
+    
+    }.form-style-9 ul li  .field-style:focus{
+        box-shadow: 0 0 5px #B0CFE0;
+        border:1px solid #B0CFE0;
+    }
+    .form-style-9 ul li .field-split{
+        width: 49%;
+    }
+    .form-style-9 ul li .field-full{
+        width: 100%;
+    }
+    .form-style-9 ul li input.align-left{
+        float:left;
+    }
+    .form-style-9 ul li input.align-right{
+        float:right;
+    }
+    .form-style-9 ul li textarea{
+        width: 100%;
+        height: 100px
+    }
+    .form-style-9 li {
+        padding: 0;
+        display: block;
+        list-style: none;
+        margin: 5px 0 0 0;
+    }
+    .form-style-9 label{
+        margin:0 0 0px 0;
+        padding:0px;
+      display: inline-block;
+      width: 250px;
+      text-align: right;
+      color: #4F4F4F;
+      font-size: 14px;
+	  white-space: pre-line!important ;
+	  overflow: hidden !important;
+    }
+	.form-style-9 label  l:lang(ar){
+          margin: 0 0 0px 0;
+    padding: 0px;
+    display: inline-block;
+    width: auto;
+    float: left;
+    text-align: left;
+    color: #4F4F4F;
+  
+    font-size: 14px;
+    white-space: pre !important;
+    overflow: hidden !important;
+}
+* {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    }
+	
+
+    .form-style-9 input[type=text], 
+    .form-style-9 input[type=date],
+    .form-style-9 input[type=datetime],
+    .form-style-9 input[type=number],
+    .form-style-9 input[type=search],
+    .form-style-9 input[type=time],
+    .form-style-9 input[type=url],
+    .form-style-9 input[type=email],
+    textarea, 
+    select{
+        box-sizing: border-box;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        -webkit-transition: all 0.30s ease-in-out;
+        -moz-transition: all 0.30s ease-in-out;
+        -ms-transition: all 0.30s ease-in-out;
+        -o-transition: all 0.30s ease-in-out;
+        outline: none;  
+        font-family: Tahoma, Verdana, Helvetica, sans-serif;
+    font-weight: normal;
+    font-size: 14px !important;
+    border-color: #DEE4E7;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 3px;
+    background-color: #FAFDFF;
+    color: #333333;
+    border: 1px solid #DEE4E7;
+    padding: 1px 2px 1px 3px;
+    
+    width:170px;
+    height: 20px !important;
+  
+	
+  /*  overflow: scroll !important; */
+	margin-left: 5px !important;
+    }
+    .form-style-9 table input,.form-style-9 table select{
+	     width: -webkit-fill-available !important;
+	}
+	
+	 .form-style-9 table {margin-left:0px;}
+	 
+	 .form-style-9 table tr:hover ,.form-style-9 table tr:focus {background:#cce2f6;}
+	 
+    .form-style-9 select{  background: #FFF;
+        overflow: hidden;
+        color: #525252;
+        font-weight: 300;
+        -webkit-border-radius: 5px 4px 4px 5px/5px 5px 4px 4px;
+        -moz-border-radius: 5px 4px 4px 5px/5px 5px 4px 4px;
+        border-radius: 5px 4px 4px 5px/5px 5px 4px 4px;
+        -webkit-box-shadow: 0 0 5px rgba(123, 123, 123, 0.2);
+        -moz-box-shadow: 0 0 5px rgba(123,123,123,.2);
+        box-shadow: 0 0 5px rgba(123, 123, 123, 0.2);
+        border: solid 1px #DADADA;
+        font-family: "helvetica neue",arial;
+        position: relative;
+        cursor: pointer;
+        padding-right:20px;
+            margin-top: 12px;
+			height:25px !important;
+        }
+    .form-style-9 input[type=text]:focus, 
+    .form-style-9 input[type=date]:focus,
+    .form-style-9 input[type=datetime]:focus,
+    .form-style-9 input[type=number]:focus,
+    .form-style-9 input[type=search]:focus,
+    .form-style-9 input[type=time]:focus,
+    .form-style-9 input[type=url]:focus,
+    .form-style-9 input[type=email]:focus,
+    .form-style-9 textarea:focus, 
+    .form-style-9 select:focus{
+        -moz-box-shadow: 0 0 8px #88D5E9;
+        -webkit-box-shadow: 0 0 8px #88D5E9;
+        box-shadow: 0 0 8px #88D5E9;
+        border: 1px solid #88D5E9;
+    }
+    .form-style-9 input[type=submit]{
+        background: #4B99AA;
+        /* padding: 8px 15px 8px 15px; */
+        border: none;
+        color: white !important;
+    }
+    .form-style-9 input[type=submit]:hover{
+		border-top: 1px solid #B0CFE0 !important;
+		border-right: 1px solid #B0CFE0 !important;
+		border-bottom: 1px solid #B0CFE0 !important;
+		border-left: 1px solid #B0CFE0 !important;
+        background: #076ab6 !important;
+        box-shadow:none;
+        -moz-box-shadow:none;
+        -webkit-box-shadow:none;
+		   color: white !important;
+    }
+    .form-style-9 .required{
+        color:red;
+    } 
+    /* .form-style-9 input[readonly]
+    {
+        border: none;
+        background: none;
+    }
+    .form-style-9 select[readonly]
+        border: none;
+        background: none;
+    }*/
+	
+	
+     .errorMessages {
+                display: none;
+                list-style-type: disc;
+                margin: -20px -3px -15px 1px;
+                padding: 8px 35px 8px 30px;
+                color: #B94A48;
+                background-color: #F2DEDE;
+                border: 2px solid #EED3D7;
+                border-radius: 4px;
+                text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+				    font-size: 14px;
+
+            }
+            .errorMessages span {
+                font-weight: bold;
+            }
+			
+		
+			.form-style .errorMessages ul{ margin:-20px 0 -15px 0 !important; width:102% !important;}
+     .deletebutton {
+       
+        -moz-border-radius: 5px;
+        -webkit-border-radius: 5px;
+        border-radius:6px;
+        color: #fff;
+        font-family: 'Oswald';
+        font-size: 20px;
+        text-decoration: none;
+        cursor: poiner;
+         border:none;
+		 width: 16px;
+		 height: 16px;
+    }
+    
+   .errorMessages:lang(ar) {
+                display: none;
+                list-style-type: disc;
+                margin: -19px 0px -10px -26px;
+                padding: 8px 35px 8px 30px;
+                color: #B94A48;
+                background-color: #F2DEDE;
+                border: 2px solid #EED3D7;
+                border-radius: 4px;
+                text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+				    font-size: 14px;
+
+            }
+    .form-style-9 ul li:lang(ar){ min-height:5px;}
+     .deletebutton:hover {
+        border: none;
+        
+		  background:#FFCCCC;
+    box-shadow: 0px 0px 1px #777;
+	padding:3px;
+        
+    }
+      .addbutton {
+        
+        -moz-border-radius: 5px;
+        -webkit-border-radius: 5px;
+        border-radius:6px;
+        color: #fff;
+        font-family: 'Oswald';
+        font-size: 20px;
+        text-decoration: none;
+        cursor: poiner;
+         border:none;'
+		 width: 16px;
+		 height: 16px;
+    }
+    
+
+    
+    
+    .addbutton:hover {
+   
+		    border: none;
+     background:#88D5E9;
+    box-shadow: 0px 0px 1px #777;
+		padding:3px;
+    
+        
+    } 
+    .form-style-9 input[readonly]  
+    
+    {
+     height:20px !important;
+     background-color:  #f0f5f5;
+	     width:auto;
+    }
+    .form-style-9 select[readonly]  
+    {
+      pointer-events: none;
+  
+     background-color:  #f0f5f5;
+    }
+	.form-style-9 checkbox[readonly]  
+    {
+      pointer-events: none;
+  
+     background-color:  #f0f5f5;
+    }
+    .form-style-9 select[disabled]  
+    
+    {
+      pointer-events: none;
+      height: 20px !important;
+
+     background-color:  #f0f5f5;
+    }
+
+    
+    ul.tabs
+    {
+        padding: 7px 0;
+        font-size: 0;
+        margin:0;
+        list-style-type: none;
+        text-align: left; /*set to left, center, or right to align the tabs as desired*/
+    }
+	 ul.tabs:lang(ar) { 
+text-align: right;
+}
+h4:lang(ar) { 
+right:2% !important;
+}
+h3:lang(ar) { 
+text-align:right !important;
+}
+    ul.tabs li
+    {
+        display: inline;
+        margin: 0;
+        margin-right:3px; /*distance between tabs*/
+        white-space: nowrap;
+    }
+	 ul.tabs li
+    {
+        display: inline;
+        margin: 0;
+        margin-right:3px; /*distance between tabs*/
+        white-space: nowrap;
+		
+    }
+          
+		   
+    ul.tabs li a
+    {
+         /* 22-3-2018 */ 
+    font:  10.5px Verdana;
+        text-decoration: none;
+        position: relative;
+        padding: 7px 16px;
+        border: 1px solid #CCC;
+        border-bottom-color:#B7B7B7;
+        
+        color: #000;
+        background: #CFD8E3 url(tabbg.gif) 0 0 repeat-x;
+    border-radius: 3px;
+        outline:none; 
+        line-height:2.0em; 
+        font-weight: bold;
+         /* --------- */
+    }
+            
+    ul.tabs li a:visited
+    {
+        color: #000;
+        
+    }
+            
+    ul.tabs li a:hover
+    {
+        /* 22-3-2018 */ 
+        border: 1px solid #B7B7B7;
+        background:#CFD8E3;
+        color: #4f4f4f;
+        /* --------- */
+    }
+            
+    ul.tabs li.selected a, ul.tabs li.selected a:hover
+    {
+        position: relative;
+        top: 0px;
+        font-weight:bold;
+        background: white;
+        border: 1px solid #B7B7B7;
+        border-bottom-color: white;
+    }
+            
+            
+    ul.tabs li.selected a:hover
+    {
+        text-decoration: none;
+    }
+         
+    
+    div.tabcontents
+    {
+        border: 1px solid #B7B7B7; padding: 30px;
+        background-color:#FFF;
+        border-radius: 0 3px 3px 3px;
+        
+    }
+
+
+
+    .panel-group .panel {
+        border-radius: 0;
+        box-shadow: none;
+        border-color: #EEEEEE;
+    }
+
+    .panel-default > .panel-heading {
+        padding: 0;
+        border-radius: 0;
+        color: #212121;
+        background-color: #FAFAFA;
+        border-color: #EEEEEE;
+    }
+
+	.panel-info > .panel-heading {
+		background-color: #B0CFE0 !important;
+		color: #fff !important;
+		font-weight:500;
+		font-size:18px;
+		    padding: 5px 15px;
+	}
+	.panel-info{
+	padding-bottom:20px !important;
+	}
+    .panel-title {
+        font-size: 14px;
+    }
+
+    .panel-title > a {
+        display: block;
+        padding: 15px;
+        text-decoration: none;
+    }
+
+    .more-less {
+        float: right;
+        color: #212121;
+    }
+
+    .panel-default > .panel-heading + .panel-collapse > .panel-body {
+        border-top-color: #EEEEEE;
+    }
+
+/* ----- v CAN BE DELETED v ----- */
+body {
+    background-color: white !important;
+    font-family: sans-serif !important;
+	font-size:16px !important;
+}
+
+.demo {
+    padding-top: 60px;
+    padding-bottom: 110px;
+}
+
+.demo-footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    padding: 15px;
+    background-color: #212121;
+    text-align: center;
+}
+
+.demo-footer > a {
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    color: #fff;
+}
+
+
+
+.error
+{
+border-color:Red;
+border-style:solid;
+border-width:1px;
+color:Red;
+}
+
+.col-md-5{height:37px; }
+#TabContainter{ margin-top:20px; border-bottom:1px solid #f0f5f5 ; margin-bottom: -10px;}
+
+
+h4{ padding-top: 5px;}
+
+
+
+   td .form-style-9 input[type=text]
+   {
+       width:auto !important;
+	   background:red !important;
+    }
+	
+	 td .form-style-9 input[type=text]
+   {
+       width:auto !important;
+	   background:red !important;
+    }
+	
+	table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+table tbody {
+  display: table;
+  width: 100%;
+}
+input {
+    text-overflow: ellipsis;
+}
+	
+	
+ a[target=_blank],a[target=_self]{
+   visibility: hidden;
+   font-size:0;
+ }
+ 
+ a[target=_blank]:after {
+  visibility: visible;
+  content: 'Preview ';
+     font-size:10px;
+
+}
+ a[target=_self]:after {
+  visibility: visible;
+  content: 'Download ';
+     font-size:10px;
+
+}
+a + br {
+display:none;
+}
+ 
+ @media (max-width: 169px) and (min-width: 140px) {
+
+  
+ .form-style-9 input[type=submit]  #Submit{
+  margin-right:15px !important;
+  }
+  h4{ font-size:7px !important ;}
+  label{
+      float: left !important;
+    width: 100% !important;
+    margin-top: -8px !important;
+	font-size:8px !important;
+    text-align :left !important;
+  }
+  
+    .form-style-9 input[readonly] {
+width:100% !important;
+font-size:10px !important;
+}
+
+.form-style-9 input[type=submit]{
+ font-size:8px !important ;
+}
+
+}
+
+ 
+  @media (max-width: 249px) and (min-width: 170px) {
+
+  
+ .form-style-9 input[type=submit]  #Submit{
+  margin-right:15px !important;
+  }
+  h4{ font-size:8px !important ;}
+  label{
+      float: left !important;
+    width: 47% !important;
+    margin-top: -8px !important;
+	font-size:8px !important;
+    text-align :left !important;
+  }
+  
+    .form-style-9 input[readonly] {
+width:50% !important;
+font-size:10px !important;
+}
+
+.form-style-9 input[type=submit]{
+ font-size:10px !important ;
+}
+
+}
+
+
+
+  @media (max-width: 299px) and (min-width: 250px) {
+  body {
+  
+  }
+  
+ .form-style-9 input[type=submit]  #Submit{
+  margin-right:15px !important;
+  }
+  h4{ font-size:14px !important ;}
+  label{
+      float: left !important;
+    width: 40% !important;
+    margin-top: -8px !important;
+	font-size:10px !important;
+  }
+  
+    .form-style-9 input[readonly] {
+width:55% !important;
+}
+
+.form-style-9 input[type=submit]{
+ font-size:14px !important ;
+}
+
+}
+
+
+
+ @media (max-width: 600px) and (min-width: 200px) {
+
+ .form-style-9 input[type=submit]  #Submit{
+  margin-right:15px !important;
+  }
+  label{
+      float: left !important;
+    width: 35% !important;
+    margin-top: -4px !important;
+  }
+  
+ .form-style-9 input[readonly] , .form-style-9 select ,
+.form-style-9 input[type=text], .form-style-9 input[type=date], .form-style-9 input[type=datetime], .form-style-9 input[type=number], .form-style-9 input[type=search], .form-style-9 input[type=time], .form-style-9 input[type=url], .form-style-9 input[type=email], textarea, select
+	{
+width:50% !important;
+}
+
+input[type=checkbox], input[type=radio]{
+	margin:0px 0 0 !important;
+    margin-top: 15px !important;
+	}
+
+
+  label:lang(ar){
+      float: right !important;
+    width: 35% !important;
+    margin-top: -4px !important;
+
+  }
+
+  .form-style-9 label:lang(ar) {
+    margin: 0 0 0px 0;
+    padding: 0px;
+    display: inline-block;
+    float: left;
+    text-align: left;
+    color: #4F4F4F;
+    font-size: 14px;
+   /* white-space: pre !important; */
+    overflow: hidden !important;
+    width: 45% !important;
+    margin-top: -7px !important;
+    font-size: 12px;
+
+}
+.form-style-9 label  l:lang(ar){
+    margin: 0 0 0px 10px;
+    padding: 0px;
+    display: inline-block;
+    width: auto;
+    float: left;
+    text-align: left;
+  
+    white-space: pre !important;
+    overflow: hidden !important;
+}
+
+ label:lang(ar){
+
+  }
+
+.form-style-9 .required:lang(ar) {
+    color: red;
+    float: left;
+} 
+
+}
+
+@media (max-width: 999px) and (min-width: 601px) {
+
+
+ .form-style-9 input[type=submit]  #Submit{
+  margin-right:15px !important;
+  }
+  label{
+      float: left !important;
+    width: 35% !important;
+    margin-top: -4px !important;
+  }
+  
+ .form-style-9 input[readonly] , .form-style-9 select ,
+.form-style-9 input[type=text], .form-style-9 input[type=date], .form-style-9 input[type=datetime], .form-style-9 input[type=number], .form-style-9 input[type=search], .form-style-9 input[type=time], .form-style-9 input[type=url], .form-style-9 input[type=email], textarea, select
+	{
+width:50% !important;
+}
+input[type=checkbox], input[type=radio]{
+	    margin: 0px 0 0 !important;
+    margin-top: 15px !important;
+	}
+
+  label:lang(ar){
+      float: right !important;
+    width: 35% !important;
+    margin-top: -4px !important;
+
+  }
+
+  .form-style-9 label:lang(ar) {
+    margin: 0 0 0px 0;
+    padding: 0px;
+    display: inline-block;
+    float: left;
+    text-align: left;
+    color: #4F4F4F;
+    font-size: 14px;
+   /* white-space: pre !important; */
+    overflow: hidden !important;
+    width: 30% !important;
+    margin-top: -7px !important;
+    font-size: 12px;
+
+}
+.form-style-9 label  l:lang(ar){
+    margin: 0 0 0px 10px;
+    padding: 0px;
+    display: inline-block;
+    width: auto;
+    float: left;
+    text-align: left;
+  
+    white-space: pre !important;
+    overflow: hidden !important;
+}
+
+ label:lang(ar){
+
+  }
+
+.form-style-9 .required:lang(ar) {
+    color: red;
+    float: left;
+} 
+
+
+}
+
+
+
+@media (max-width: 1367px) and (min-width: 1000px) {
+  body {
+  
+  }
+  
+ .form-style-9 input[type=submit]  #Submit{
+  margin-right:15px !important;
+  }
+  label{
+      float: left !important;
+    width: 40% !important;
+    margin-top: -8px !important;
+  }
+  
+  .form-style-9 input[readonly] {
+width:55% !important;
+}
+
+
+
+.panel-info:lang(ar){
+/* background:red !important; */
+}
+}
+
+
+@media (max-width: 1367px) and (min-width: 1000px){
+
+
+ .form-style-9 input[type=submit]  #Submit{
+  margin-right:15px !important;
+  }
+  label{
+      float: left !important;
+    width: 35% !important;
+    margin-top: -4px !important;
+  }
+  
+ .form-style-9 input[readonly] , .form-style-9 select ,
+.form-style-9 input[type=text], .form-style-9 input[type=date], .form-style-9 input[type=datetime], .form-style-9 input[type=number], .form-style-9 input[type=search], .form-style-9 input[type=time], .form-style-9 input[type=url], .form-style-9 input[type=email], textarea, select
+	{
+width:50% !important;
+}
+
+input[type=checkbox], input[type=radio]{
+	    margin: 0px 0 0 !important;
+    margin-top: 15px !important;
+	}
+
+  label:lang(ar){
+      float: right !important;
+    width: 35% !important;
+    margin-top: -4px !important;
+
+  }
+
+  .form-style-9 label:lang(ar) {
+    margin: 0 0 0px 0;
+    padding: 0px;
+    display: inline-block;
+    float: left;
+    text-align: left;
+    color: #4F4F4F;
+    font-size: 14px;
+   /* white-space: pre !important; */
+    overflow: hidden !important;
+    width: 45% !important;
+    margin-top: -7px !important;
+    font-size: 12px;
+
+}
+.form-style-9 label  l:lang(ar){
+    margin: 0 0 0px 10px;
+    padding: 0px;
+    display: inline-block;
+    width: auto;
+    float: left;
+    text-align: left;
+  
+    white-space: pre-line!important ;
+    overflow: hidden !important;
+}
+
+ label:lang(ar){
+
+  }
+
+.form-style-9 .required:lang(ar) {
+    color: red;
+    float: left;
+} 
+
+
+}
+
+@media (max-width: 700px) and (min-width: 100px) {
+	
+	.form-style-9 table {
+		overflow: scroll;
+		height: 40%;
+	}
+	
+	th label{
+	width : 94px !important;
+	font-size: 13px !important;
+	}
+	
+	.form-style-9 table input[type=text]{
+	width: 95px !important
+	}
+
+}
+
+
+.form-style-9 table input[type=text]{
+    width: 95% !important;
+	height:20px;
+
+}

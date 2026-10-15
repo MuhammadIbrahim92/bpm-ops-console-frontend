@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityRecord, ActivityStat, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, AttributePage, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -35,6 +35,10 @@ export class ApiService {
 
   constructor(private readonly http: HttpClient) {}
 
+  login(username: string, password: string): Observable<{ token: string; expiresInSeconds: number }> {
+    return this.http.post<{ token: string; expiresInSeconds: number }>(`${this.base}/auth/login`, { username, password });
+  }
+
   me(): Observable<Me> {
     return this.http.get<Me>(`${this.base}/me`);
   }
@@ -53,8 +57,26 @@ export class ApiService {
     return this.http.get<InstanceSummary>(`${this.base}/instances/${id}`);
   }
 
-  activities(id: number): Observable<ActivityRecord[]> {
-    return this.http.get<ActivityRecord[]>(`${this.base}/instances/${id}/activities`);
+  activities(id: number, page = 0, size = 50, activityId?: string): Observable<Page<StepRow>> {
+    return this.http.get<Page<StepRow>>(`${this.base}/instances/${id}/activities`,
+      { params: toParams({ page, size, activityId: activityId ?? '' }) });
+  }
+
+  processAttributes(id: number, page = 0, size = 50): Observable<AttributePage> {
+    return this.http.get<AttributePage>(`${this.base}/instances/${id}/attributes`, { params: toParams({ page, size }) });
+  }
+
+  stepAttributes(id: number, activityInstanceId: number, page = 0, size = 50): Observable<AttributePage> {
+    return this.http.get<AttributePage>(`${this.base}/instances/${id}/activities/${activityInstanceId}/attributes`,
+      { params: toParams({ page, size }) });
+  }
+
+  stepForms(id: number, activityInstanceId: number): Observable<WorkItemHtml[]> {
+    return this.http.get<WorkItemHtml[]>(`${this.base}/instances/${id}/activities/${activityInstanceId}/forms`);
+  }
+
+  startForm(id: number): Observable<StartForm> {
+    return this.http.get<StartForm>(`${this.base}/instances/${id}/start-form`);
   }
 
   diagram(id: number): Observable<InstanceDiagram> {
@@ -63,6 +85,10 @@ export class ApiService {
 
   instanceRequests(id: number): Observable<RequestRow[]> {
     return this.http.get<RequestRow[]>(`${this.base}/instances/${id}/requests`);
+  }
+
+  instanceTimerRequests(id: number): Observable<TimerRequestRow[]> {
+    return this.http.get<TimerRequestRow[]>(`${this.base}/instances/${id}/timer-requests`);
   }
 
   issueSummary(): Observable<Record<string, number>> {

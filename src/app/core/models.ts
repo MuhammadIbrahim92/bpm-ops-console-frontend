@@ -149,6 +149,36 @@ export interface RequestRow {
   finishDate?: string;
   instanceId?: number;
   retryable: boolean;
+  requestLength?: number;
+  userType?: string;
+  priority?: string;
+  activityLevel?: number;
+}
+
+export interface TimerRequestRow {
+  id: number;
+  type?: string;
+  status?: string;
+  requestDate?: string;
+  endDate?: string;
+  processId?: number;
+  processVersion?: string;
+  activityId?: string;
+  activityInstanceId?: string;
+  instanceId?: string;
+  command?: string;
+  repeated: boolean;
+  period?: number;
+  unit?: string;
+  scriptType?: string;
+  exceptionName?: string;
+  recId?: number;
+  reminder: boolean;
+  duration: boolean;
+  terminateTask: boolean;
+  priority?: string;
+  notes?: string;
+  engineId?: string;
 }
 
 export interface Lookups {
@@ -160,4 +190,55 @@ export interface Lookups {
 export interface ApiError {
   code: string;
   message: string;
+}
+
+export interface AttributeValue {
+  name: string;
+  type?: string;
+  value?: string;
+  value1?: string;
+  tabular: boolean;
+}
+
+/** Attributes of one data object (DO_ID). */
+export interface AttributeSection {
+  doId: number;
+  doName: string;
+  attributes: AttributeValue[];
+}
+
+export interface WorkItemHtml {
+  workItemId: number;
+  name?: string;
+  status?: string;
+  taskType?: string;
+  assignedUser?: string;
+  finishedBy?: string;
+  endDate?: string;
+  html: string;
+}
+
+/** One page of attribute rows, grouped by data object. total counts attribute rows. */
+export interface AttributePage {
+  sections: AttributeSection[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface StartForm {
+  html: string;
+  createdBy?: string;
+  created?: string;
+}
+
+/** One step in the paged step list. taskType is the work item task type (absent for automatic steps). */
+export interface StepRow {
+  activityInstanceId: number;
+  activityId: string;
+  status?: string;
+  taskType?: string;
+  creation?: string;
+  start?: string;
+  finish?: string;
 }

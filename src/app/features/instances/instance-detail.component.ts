@@ -1,21 +1,25 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
-import { ActivityRecord, ActivityState, DiagramNode, InstanceDiagram, InstanceSummary, RequestRow } from '../../core/models';
+import { ActivityState, AttributePage, DiagramNode, InstanceDiagram, InstanceSummary, RequestRow, StartForm, StepRow, TimerRequestRow, WorkItemHtml } from '../../core/models';
+import { kindLabel } from '../../core/diagram-geometry';
+import { PagerComponent } from '../../shared/pager.component';
+import { RequestTablesComponent } from '../../shared/request-tables.component';
 import { activityLook, instanceLook, requestLook } from '../../core/status';
 import { DiagramViewComponent } from '../../shared/diagram-view.component';
 import { AgePipe, DateTimePipe, DurationPipe } from '../../shared/pipes';
-import { RetryButtonComponent } from '../../shared/retry-button.component';
+import { AttributeSectionsComponent } from '../../shared/attribute-sections.component';
+import { SavedHtmlComponent } from '../../shared/saved-html.component';
 import { StatusBadgeComponent } from '../../shared/status-badge.component';
 
-type Tab = 'diagram' | 'steps' | 'requests';
+type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
 
 @Component({
   selector: 'app-instance-detail',
   standalone: true,
-  imports: [RouterLink, DiagramViewComponent, StatusBadgeComponent, RetryButtonComponent, DateTimePipe, AgePipe, DurationPipe],
+  imports: [RequestTablesComponent, PagerComponent, AttributeSectionsComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
   template: `
     <div class="page">
       <p><a routerLink="/instances">&larr; All instances</a></p>
@@ -42,7 +46,8 @@ type Tab = 'diagram' | 'steps' | 'requests';
             <button class="tab" role="tab" [attr.aria-selected]="tab() === 'diagram'" (click)="show('diagram')">Diagram</button>
           }
           <button class="tab" role="tab" [attr.aria-selected]="tab() === 'steps'" (click)="show('steps')">Steps</button>
-          @if (auth.can('VIEW_REQUESTS')) {
+          <button class="tab" role="tab" [attr.aria-selected]="tab() === 'attributes'" (click)="show('attributes')">Attributes</button>
+          @if (auth.can('VIEW_INSTANCES')) {
             <button class="tab" role="tab" [attr.aria-selected]="tab() === 'requests'" (click)="show('requests')">Engine requests</button>
           }
         </div>
@@ -57,7 +62,7 @@ type Tab = 'diagram' | 'steps' | 'requests';
             }
             @if (d.graph; as g) {
               <div class="split">
-                <app-diagram-view [graph]="g" [overlay]="d.overlay" [selectedId]="selectedId()" (selected)="selectedId.set($event)" />
+                <app-diagram-view [graph]="g" [overlay]="d.overlay" [selectedId]="selectedId()" (selected)="onNode($event)" />
                 <aside class="card side" aria-live="polite">
                   @if (selectedNode(); as n) {
                     <h2>{{ n.name || n.activityId }}</h2>
@@ -98,46 +103,151 @@ type Tab = 'diagram' | 'steps' | 'requests';
 
         @if (tab() === 'steps') {
           <div class="card">
+            <div class="start-form">
+              <button type="button" class="btn small" (click)="toggleStartForm()">{{ startOpen() ? 'Hide start form' : 'Start form' }}</button>
+              <span class="muted">The form the start event collected.</span>
+              @if (startOpen()) {
+                @if (startFormError()) {
+                  <p class="note" role="status">{{ startFormError() }}</p>
+                }
+                @if (startForm(); as sf) {
+                  <h3>Start form <span class="muted">@if (sf.createdBy) { by {{ sf.createdBy }} } @if (sf.created) { , {{ sf.created | dateTime }} }</span></h3>
+                  <app-saved-html [html]="sf.html" />
+                } @else if (!startFormError()) {
+                  <p class="muted">Loading…</p>
+                }
+              }
+            </div>
+
+            @if (typesOnPage().length > 0) {
+              <p class="legend muted">Step types on this page:
+                @for (t of typesOnPage(); track t) { <span class="type-tag">{{ t }}</span> }
+              </p>
+            }
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Step</th><th>Status</th><th>Started</th><th>Finished</th></tr></thead>
+                <thead><tr><th>Step</th><th>Type</th><th>Status</th><th>Started</th><th>Finished</th><th></th></tr></thead>
                 <tbody>
                   @for (a of activities(); track a.activityInstanceId) {
                     <tr>
                       <td><span class="mono">{{ a.activityId }}</span> @if (stepName(a.activityId); as nm) { <span class="muted">{{ nm }}</span> }</td>
+                      <td>@if (typeOf(a); as ty) { <span class="type-tag">{{ ty }}</span> }</td>
                       <td><app-status-badge [look]="actLook(statusOf(a))" [text]="a.status" /></td>
                       <td class="nowrap">{{ (a.start || a.creation) | dateTime }}</td>
                       <td class="nowrap">{{ a.finish | dateTime }}</td>
+                      <td><button type="button" class="btn small" (click)="toggleDetails(a.activityInstanceId)">{{ openStep() === a.activityInstanceId ? 'Hide details' : 'Details' }}</button></td>
                     </tr>
+                    @if (openStep() === a.activityInstanceId) {
+                      <tr>
+                        <td colspan="6">
+                          @if (stepError()) {
+                            <p class="note" role="alert">{{ stepError() }}</p>
+                          }
+                          @if (stepAttributes(); as pg) {
+                            <h3>Attributes of this step</h3>
+                            <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
+                            @if (pg.total > pg.size || pg.page > 0) {
+                              <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
+                                [sizes]="[25, 50, 100, 200]" (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
+                            }
+                          } @else if (!stepError()) {
+                            <p class="muted">Loading…</p>
+                          }
+                          @for (w of stepForms(); track w.workItemId) {
+                            <h3>Saved form: {{ w.name || 'work item ' + w.workItemId }}
+                              <span class="muted">{{ w.status }}@if (w.finishedBy || w.assignedUser) { , by {{ w.finishedBy || w.assignedUser }} }@if (w.endDate) { , {{ w.endDate | dateTime }} }</span></h3>
+                            <app-saved-html [html]="w.html" />
+                          }
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
             </div>
             @if (activities().length === 0) { <p class="empty">No steps have run yet.</p> }
+            <app-pager [total]="stepTotal()" [page]="stepPage()" [size]="stepSize()" noun="steps"
+              (pageChange)="loadSteps($event, stepSize())" (sizeChange)="loadSteps(0, $event)" />
+          </div>
+        }
+
+        @if (tab() === 'attributes') {
+          <div class="card">
+            <p class="muted">Current attributes of this process instance, grouped by data object.</p>
+            @if (processAttributes(); as pg) {
+              <app-attribute-sections [sections]="pg.sections" emptyText="This instance has no attributes." />
+              <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
+                (pageChange)="loadAttributes($event, pg.size)" (sizeChange)="loadAttributes(0, $event)" />
+            } @else {
+              <p class="muted">Loading…</p>
+            }
+          </div>
+        }
+
+        @if (popup(); as pu) {
+          <div class="backdrop" (click)="closePopup()"></div>
+          <div class="dialog card" role="dialog" aria-modal="true" [attr.aria-label]="pu.name" tabindex="-1" (keydown.escape)="closePopup()">
+            <div class="dialog-head">
+              <h2>{{ pu.name }} @if (pu.type) { <span class="type-tag">{{ pu.type }}</span> } <span class="mono muted">{{ pu.activityId }}</span></h2>
+              <button type="button" class="btn small" (click)="closePopup()" aria-label="Close">Close</button>
+            </div>
+            <div class="dialog-body">
+              @if (pu.isStart) {
+                @if (startFormError()) {
+                  <p class="note" role="status">{{ startFormError() }}</p>
+                }
+                @if (startForm(); as sf) {
+                  <h3>Start form <span class="muted">@if (sf.createdBy) { by {{ sf.createdBy }} } @if (sf.created) { , {{ sf.created | dateTime }} }</span></h3>
+                  <app-saved-html [html]="sf.html" />
+                } @else if (!startFormError()) {
+                  <p class="muted">Loading…</p>
+                }
+              }
+              @if (popupLoading()) {
+                <p class="muted">Loading…</p>
+              } @else if (popupSteps().length === 0 && !pu.isStart) {
+                <p class="empty">This step has not run in this instance.</p>
+              }
+              @if (popupSteps().length > 1) {
+                <label class="exec">Execution
+                  <select (change)="pickExecution($event)">
+                    @for (e of popupSteps(); track e.activityInstanceId; let i = $index) {
+                      <option [value]="e.activityInstanceId" [selected]="e.activityInstanceId === openStep()">#{{ i + 1 }} · {{ e.status }} · {{ (e.start || e.creation) | dateTime }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              @if (openStep() !== null) {
+                @if (stepError()) {
+                  <p class="note" role="alert">{{ stepError() }}</p>
+                }
+                @if (stepAttributes(); as pg) {
+                  <h3>Attributes</h3>
+                  <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
+                  @if (pg.total > pg.size || pg.page > 0) {
+                    <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
+                      (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
+                  }
+                } @else if (!stepError()) {
+                  <p class="muted">Loading…</p>
+                }
+                @for (w of stepForms(); track w.workItemId) {
+                  <h3>Saved form: {{ w.name || 'work item ' + w.workItemId }}
+                    <span class="muted">{{ w.status }}@if (w.finishedBy || w.assignedUser) { , by {{ w.finishedBy || w.assignedUser }} }@if (w.endDate) { , {{ w.endDate | dateTime }} }</span></h3>
+                  <app-saved-html [html]="w.html" />
+                }
+              }
+              @if (auth.can('VIEW_INSTANCES')) {
+                <app-request-tables [requests]="popupRequests()" [timers]="popupTimers()" [allowRetry]="auth.can('RETRY_REQUEST')" (retried)="replaceRequest($event)" />
+              }
+            </div>
           </div>
         }
 
         @if (tab() === 'requests') {
           <div class="card">
-            <p class="muted">Engine requests whose command names this instance. Retrying puts the request back in the queue; the engine picks it up again.</p>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Request</th><th>Type</th><th>Status</th><th>Requested</th><th>Notes</th><th></th></tr></thead>
-                <tbody>
-                  @for (r of requests(); track r.id) {
-                    <tr>
-                      <td>{{ r.id }}</td>
-                      <td>{{ r.type }}</td>
-                      <td><app-status-badge [look]="reqLook(r.status)" [text]="r.status" /></td>
-                      <td class="nowrap">{{ r.requestDate | dateTime }}</td>
-                      <td>{{ r.rejectionReason || r.notes }}</td>
-                      <td><app-retry-button [row]="r" [allowed]="auth.can('RETRY_REQUEST')" (retried)="replaceRequest($event)" /></td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-            @if (requests().length === 0) { <p class="empty">No engine requests found for this instance.</p> }
+            <p class="muted">Engine and timer requests of this instance. Retrying an engine request puts it back in the queue; the engine picks it up again.</p>
+            <app-request-tables [requests]="requests()" [timers]="timers()" [allowRetry]="auth.can('RETRY_REQUEST')" (retried)="replaceRequest($event)" />
           </div>
         }
       }
@@ -156,6 +266,15 @@ type Tab = 'diagram' | 'steps' | 'requests';
     .side h2 { margin-bottom: 2px; }
     ul.plain { list-style: none; padding: 0; margin: 0; }
     ul.plain li { padding: 3px 0; }
+    .start-form { margin-bottom: 12px; }
+    .backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 50; }
+    .dialog { position: fixed; z-index: 51; top: 5vh; left: 50%; transform: translateX(-50%); width: min(960px, 94vw); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .dialog-head h2 { margin: 0; font-size: 16px; }
+    .dialog-body { overflow: auto; margin-top: 8px; }
+    .exec { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 600; }
+    .legend { margin: 4px 0 8px; }
+    .type-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin-right: 4px; white-space: nowrap; }
     .link { font: inherit; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-align: left; }
     .link:hover { text-decoration: underline; }
   `]
@@ -167,11 +286,49 @@ export class InstanceDetailComponent implements OnInit {
 
   readonly instance = signal<InstanceSummary | null>(null);
   readonly diagram = signal<InstanceDiagram | null>(null);
-  readonly activities = signal<ActivityRecord[]>([]);
+  readonly activities = signal<StepRow[]>([]);
+  readonly stepTotal = signal(0);
+  readonly stepPage = signal(0);
+  readonly stepSize = signal(50);
   readonly requests = signal<RequestRow[]>([]);
+  readonly timers = signal<TimerRequestRow[]>([]);
+  private queuesLoaded = false;
   readonly error = signal<string | null>(null);
   readonly tab = signal<Tab>('steps');
   readonly selectedId = signal<string | undefined>(undefined);
+  readonly processAttributes = signal<AttributePage | null>(null);
+  readonly openStep = signal<number | null>(null);
+  readonly stepAttributes = signal<AttributePage | null>(null);
+  readonly stepForms = signal<WorkItemHtml[]>([]);
+  readonly stepError = signal<string | null>(null);
+  readonly startOpen = signal(false);
+  readonly popup = signal<{ activityId: string; name: string; type: string; isStart: boolean } | null>(null);
+  readonly popupSteps = signal<StepRow[]>([]);
+  readonly popupLoading = signal(false);
+  readonly startForm = signal<StartForm | null>(null);
+  readonly startFormError = signal<string | null>(null);
+  /** Queue rows that belong to the clicked step: any of its executions, or the start request for a start event. */
+  readonly popupRequests = computed<RequestRow[]>(() => {
+    const pu = this.popup();
+    const ids = new Set(this.popupSteps().map(s => s.activityInstanceId));
+    if (!pu) {
+      return [];
+    }
+    return this.requests().filter(r => {
+      const m = /ACT_INST_ID\s*=\s*(\d+)/i.exec(r.command ?? '');
+      return m ? ids.has(Number(m[1])) : pu.isStart;
+    });
+  });
+  readonly popupTimers = computed<TimerRequestRow[]>(() => {
+    const pu = this.popup();
+    const ids = new Set(this.popupSteps().map(s => String(s.activityInstanceId)));
+    if (!pu) {
+      return [];
+    }
+    return this.timers().filter(r => r.activityId === pu.activityId || (r.activityInstanceId != null && ids.has(r.activityInstanceId)));
+  });
+  readonly typesOnPage = computed<string[]>(() =>
+    Array.from(new Set(this.activities().map(a => this.typeOf(a)).filter(t => t !== ''))));
 
   readonly selectedNode = computed<DiagramNode | undefined>(() =>
     this.diagram()?.graph?.nodes.find(n => n.activityId === this.selectedId()));
@@ -196,12 +353,28 @@ export class InstanceDetailComponent implements OnInit {
 
   show(tab: Tab): void {
     this.tab.set(tab);
-    if (tab === 'requests' && this.requests().length === 0) {
-      this.api.instanceRequests(this.id).subscribe({
-        next: r => this.requests.set(r),
-        error: e => this.error.set(describeError(e))
-      });
+    if (tab === 'attributes' && this.processAttributes() === null) {
+      this.loadAttributes(0, 50);
     }
+    if (tab === 'requests') {
+      this.ensureQueues();
+    }
+  }
+
+  /** Loads the engine and timer queue rows of this instance once (operations only). */
+  private ensureQueues(): void {
+    if (this.queuesLoaded || !this.auth.can('VIEW_INSTANCES')) {
+      return;
+    }
+    this.queuesLoaded = true;
+    this.api.instanceRequests(this.id).subscribe({
+      next: r => this.requests.set(r),
+      error: e => this.error.set(describeError(e))
+    });
+    this.api.instanceTimerRequests(this.id).subscribe({
+      next: r => this.timers.set(r),
+      error: e => this.error.set(describeError(e))
+    });
   }
 
   nameOf(activityId: string): string {
@@ -213,7 +386,7 @@ export class InstanceDetailComponent implements OnInit {
     return name && name !== activityId ? name : '';
   }
 
-  statusOf(a: ActivityRecord) {
+  statusOf(a: StepRow) {
     // The overlay already normalises the engine's spellings; for the plain list map the common ones here.
     switch ((a.status ?? '').trim().toUpperCase()) {
       case 'RUNNING': case 'STARTED': return 'RUNNING' as const;
@@ -226,6 +399,156 @@ export class InstanceDetailComponent implements OnInit {
     }
   }
 
+  loadSteps(page: number, size: number): void {
+    this.openStep.set(null);
+    this.api.activities(this.id, page, size).subscribe({
+      next: p => {
+        this.activities.set(p.items);
+        this.stepTotal.set(p.total);
+        this.stepPage.set(p.page);
+        this.stepSize.set(p.size);
+      },
+      error: e => this.error.set(describeError(e))
+    });
+  }
+
+  loadAttributes(page: number, size: number): void {
+    this.api.processAttributes(this.id, page, size).subscribe({
+      next: p => this.processAttributes.set(p),
+      error: e => this.error.set(describeError(e))
+    });
+  }
+
+  loadStepAttributes(page: number, size: number): void {
+    const open = this.openStep();
+    if (open === null) {
+      return;
+    }
+    this.api.stepAttributes(this.id, open, page, size).subscribe({
+      next: p => { if (this.openStep() === open) { this.stepAttributes.set(p); } },
+      error: e => this.stepError.set(describeError(e))
+    });
+  }
+
+  toggleDetails(activityInstanceId: number): void {
+    this.stepAttributes.set(null);
+    this.stepForms.set([]);
+    this.stepError.set(null);
+    if (this.openStep() === activityInstanceId) {
+      this.openStep.set(null);
+      return;
+    }
+    this.openStep.set(activityInstanceId);
+    this.loadStepAttributes(0, 50);
+    this.api.stepForms(this.id, activityInstanceId).subscribe({
+      next: f => { if (this.openStep() === activityInstanceId) { this.stepForms.set(f); } },
+      error: e => this.stepError.set(describeError(e))
+    });
+  }
+
+  /** A click on a diagram node: select it and show its attributes and saved HTML in a popup. */
+  onNode(activityId: string | undefined): void {
+    this.selectedId.set(activityId);
+    if (!activityId) {
+      return;
+    }
+    const node = this.diagram()?.graph?.nodes.find(n => n.activityId === activityId);
+    const isStart = node?.kind === 'START';
+    this.popup.set({
+      activityId,
+      name: node?.name?.trim() || activityId,
+      type: node ? kindLabel(node.kind) : '',
+      isStart
+    });
+    this.popupSteps.set([]);
+    this.ensureQueues();
+    this.popupLoading.set(true);
+    this.openStep.set(null);
+    this.stepAttributes.set(null);
+    this.stepForms.set([]);
+    this.stepError.set(null);
+    if (isStart) {
+      this.loadStartForm();
+    }
+    this.api.activities(this.id, 0, 200, activityId).subscribe({
+      next: p => {
+        if (this.popup()?.activityId !== activityId) {
+          return;
+        }
+        this.popupSteps.set(p.items);
+        this.popupLoading.set(false);
+        if (p.items.length > 0) {
+          this.showExecution(p.items[p.items.length - 1].activityInstanceId);
+        }
+      },
+      error: e => { this.popupLoading.set(false); this.stepError.set(describeError(e)); }
+    });
+  }
+
+  pickExecution(e: Event): void {
+    this.showExecution(Number((e.target as HTMLSelectElement).value));
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.popup()) {
+      this.closePopup();
+    }
+  }
+
+  closePopup(): void {
+    this.popup.set(null);
+    this.openStep.set(null);
+    this.stepAttributes.set(null);
+    this.stepForms.set([]);
+    this.stepError.set(null);
+  }
+
+  private showExecution(activityInstanceId: number): void {
+    this.stepAttributes.set(null);
+    this.stepForms.set([]);
+    this.stepError.set(null);
+    this.openStep.set(activityInstanceId);
+    this.loadStepAttributes(0, 50);
+    this.api.stepForms(this.id, activityInstanceId).subscribe({
+      next: f => { if (this.openStep() === activityInstanceId) { this.stepForms.set(f); } },
+      error: e => this.stepError.set(describeError(e))
+    });
+  }
+
+  private loadStartForm(): void {
+    if (this.startForm() === null && this.startFormError() === null) {
+      this.api.startForm(this.id).subscribe({
+        next: f => this.startForm.set(f),
+        error: e => this.startFormError.set(e?.status === 404 ? 'This instance has no saved start form.' : describeError(e))
+      });
+    }
+  }
+
+  toggleStartForm(): void {
+    if (this.startOpen()) {
+      this.startOpen.set(false);
+      return;
+    }
+    this.startOpen.set(true);
+    if (this.startForm() === null && this.startFormError() === null) {
+      this.api.startForm(this.id).subscribe({
+        next: f => this.startForm.set(f),
+        error: e => this.startFormError.set(e?.status === 404 ? 'This instance has no saved start form.' : describeError(e))
+      });
+    }
+  }
+
+  /** Task type annotation: the drawing's node type when known, else the work item task type. */
+  typeOf(a: StepRow): string {
+    const node = this.diagram()?.graph?.nodes.find(n => n.activityId === a.activityId);
+    const label = node ? kindLabel(node.kind) : '';
+    if (label) {
+      return label;
+    }
+    return a.taskType ? `${a.taskType.charAt(0).toUpperCase()}${a.taskType.slice(1).toLowerCase()} task` : '';
+  }
+
   replaceRequest(updated: RequestRow): void {
     this.requests.update(list => list.map(r => (r.id === updated.id ? updated : r)));
   }
@@ -235,11 +558,18 @@ export class InstanceDetailComponent implements OnInit {
     this.instance.set(null);
     this.diagram.set(null);
     this.requests.set([]);
+    this.timers.set([]);
+    this.queuesLoaded = false;
+    this.processAttributes.set(null);
+    this.openStep.set(null);
+    this.stepAttributes.set(null);
+    this.stepForms.set([]);
+    this.stepError.set(null);
+    this.startOpen.set(false);
+    this.startForm.set(null);
+    this.startFormError.set(null);
     this.selectedId.set(undefined);
-    this.api.activities(this.id).subscribe({
-      next: a => this.activities.set(a),
-      error: e => this.error.set(describeError(e))
-    });
+    this.loadSteps(0, this.stepSize());
     if (this.auth.can('VIEW_DIAGRAM')) {
       this.tab.set('diagram');
       this.api.diagram(this.id).subscribe({

@@ -130,6 +130,34 @@ export function kindTag(kind: NodeKind): string {
   }
 }
 
+/** Full name of a node's task type, for annotations next to steps. Empty for unknown shapes. */
+export function kindLabel(kind: NodeKind): string {
+  switch (kind) {
+    case 'START':
+      return 'Start event';
+    case 'END':
+      return 'End event';
+    case 'USER_TASK':
+      return 'User task';
+    case 'SCRIPT_TASK':
+      return 'Script task';
+    case 'DATABASE_TASK':
+      return 'Database task';
+    case 'SERVICE_TASK':
+      return 'Service task';
+    case 'SUB_PROCESS':
+      return 'Sub-process';
+    case 'GATEWAY_EXCLUSIVE':
+      return 'Exclusive gateway';
+    case 'GATEWAY_FORK':
+      return 'Parallel gateway';
+    case 'ERROR_EVENT':
+      return 'Error event';
+    default:
+      return '';
+  }
+}
+
 export function diamondPoints(n: DiagramNode): string {
   const cx = n.x + n.width / 2;
   const cy = n.y + n.height / 2;
