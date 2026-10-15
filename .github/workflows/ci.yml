@@ -1,0 +1,20 @@
+name: build
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # No lockfile is committed yet; commit package-lock.json after the first install and switch to `npm ci`.
+      - run: npm install
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bpm-ops-console-ui
+          path: dist/bpm-ops-console/browser
