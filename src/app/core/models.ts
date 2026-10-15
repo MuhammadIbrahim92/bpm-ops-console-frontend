@@ -114,6 +114,9 @@ export type IssueType =
   | 'SUSPENDED_INSTANCE' | 'ORPHAN_INSTANCE' | 'STUCK_REQUEST';
 
 export interface Issue {
+  activityName?: string;
+  activityStatus?: string;
+  activityType?: string;
   type: IssueType;
   severity: 'HIGH' | 'MEDIUM' | 'LOW';
   instanceId?: number;

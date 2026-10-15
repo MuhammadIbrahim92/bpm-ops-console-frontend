@@ -10,13 +10,15 @@ import { describeError } from '../../core/errors';
 import { ISSUE_INFO, ISSUE_ORDER, isIssueType } from '../../core/issue-info';
 import { Issue, IssueType } from '../../core/models';
 import { downloadCsv } from '../../shared/csv';
+import { activityTypeLabel, engineActivityLook } from '../../core/status';
 import { AgePipe, DateTimePipe } from '../../shared/pipes';
+import { StatusBadgeComponent } from '../../shared/status-badge.component';
 import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
 
 @Component({
   selector: 'app-issue-list',
   standalone: true,
-  imports: [RouterLink, MessageModule, TableModule, TabsModule, TagModule, TableToolsComponent, AgePipe, DateTimePipe],
+  imports: [RouterLink, MessageModule, TableModule, TabsModule, TagModule, TableToolsComponent, StatusBadgeComponent, AgePipe, DateTimePipe],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1">Issues</div>
@@ -42,14 +44,17 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
       <p-table #dt [value]="items()" [loading]="loading()" [paginator]="items().length > 25" [rows]="25"
         [rowsPerPageOptions]="[25, 50, 100]" [rowHover]="true" [stripedRows]="true" [resizableColumns]="true"
         columnResizeMode="expand" [scrollable]="true" [sortField]="'since'" [sortOrder]="1"
-        [globalFilterFields]="['severity', 'instanceName', 'instanceId', 'processName', 'activityId', 'detail']"
+        [globalFilterFields]="['severity', 'instanceName', 'instanceId', 'processName', 'activityId', 'activityName', 'activityType', 'activityStatus', 'detail']"
         [tableStyle]="{ 'min-width': '60rem' }">
         <ng-template #header>
           <tr>
             @if (col('severity')) { <th pSortableColumn="severity" pResizableColumn>Severity <p-sortIcon field="severity" /><p-columnFilter type="text" field="severity" display="menu" /></th> }
             @if (col('instanceName')) { <th pSortableColumn="instanceName" pResizableColumn>Instance <p-sortIcon field="instanceName" /><p-columnFilter type="text" field="instanceName" display="menu" /></th> }
             @if (col('processName')) { <th pSortableColumn="processName" pResizableColumn>Process <p-sortIcon field="processName" /><p-columnFilter type="text" field="processName" display="menu" /></th> }
-            @if (col('activityId')) { <th pSortableColumn="activityId" pResizableColumn>Step <p-sortIcon field="activityId" /><p-columnFilter type="text" field="activityId" display="menu" /></th> }
+            @if (col('activityId')) { <th pSortableColumn="activityId" pResizableColumn>Step id <p-sortIcon field="activityId" /><p-columnFilter type="text" field="activityId" display="menu" /></th> }
+            @if (col('activityName')) { <th pSortableColumn="activityName" pResizableColumn>Step name <p-sortIcon field="activityName" /><p-columnFilter type="text" field="activityName" display="menu" /></th> }
+            @if (col('activityType')) { <th pSortableColumn="activityType" pResizableColumn>Step type <p-sortIcon field="activityType" /><p-columnFilter type="text" field="activityType" display="menu" /></th> }
+            @if (col('activityStatus')) { <th pSortableColumn="activityStatus" pResizableColumn>Step status <p-sortIcon field="activityStatus" /><p-columnFilter type="text" field="activityStatus" display="menu" /></th> }
             @if (col('since')) { <th pSortableColumn="since" pResizableColumn>Since <p-sortIcon field="since" /></th> }
             @if (col('detail')) { <th pSortableColumn="detail" pResizableColumn>Detail <p-sortIcon field="detail" /><p-columnFilter type="text" field="detail" display="menu" /></th> }
             @if (col('requestId') && auth.can('VIEW_REQUESTS')) { <th pSortableColumn="requestId" pResizableColumn>Request <p-sortIcon field="requestId" /></th> }
@@ -61,6 +66,9 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
             @if (col('instanceName')) { <td>@if (i.instanceId) { <a [routerLink]="['/instances', i.instanceId]">{{ i.instanceName || i.instanceId }}</a> <span class="text-muted-color">#{{ i.instanceId }}</span> }</td> }
             @if (col('processName')) { <td>{{ i.processName }}</td> }
             @if (col('activityId')) { <td class="mono">{{ i.activityId }}</td> }
+            @if (col('activityName')) { <td>{{ i.activityName }}</td> }
+            @if (col('activityType')) { <td>@if (i.activityType) { <p-tag [value]="typeLabel(i.activityType)" severity="secondary" /> }</td> }
+            @if (col('activityStatus')) { <td>@if (i.activityStatus) { <app-status-badge [look]="statusLook(i.activityStatus)" [text]="i.activityStatus" /> }</td> }
             @if (col('since')) { <td class="nowrap" [title]="i.since | dateTime">{{ i.since | age }}</td> }
             @if (col('detail')) { <td>{{ i.detail }}</td> }
             @if (col('requestId') && auth.can('VIEW_REQUESTS')) {
@@ -93,7 +101,10 @@ export class IssueListComponent implements OnInit {
     { field: 'severity', header: 'Severity' },
     { field: 'instanceName', header: 'Instance' },
     { field: 'processName', header: 'Process' },
-    { field: 'activityId', header: 'Step' },
+    { field: 'activityId', header: 'Step id' },
+    { field: 'activityName', header: 'Step name' },
+    { field: 'activityType', header: 'Step type' },
+    { field: 'activityStatus', header: 'Step status' },
     { field: 'since', header: 'Since' },
     { field: 'detail', header: 'Detail' },
     { field: 'requestId', header: 'Request' }
@@ -103,6 +114,9 @@ export class IssueListComponent implements OnInit {
   col(field: string): boolean {
     return this.visible().includes(field);
   }
+
+  typeLabel = activityTypeLabel;
+  statusLook = engineActivityLook;
 
   ngOnInit(): void {
     this.api.issueSummary().subscribe({
@@ -150,7 +164,9 @@ export class IssueListComponent implements OnInit {
     downloadCsv(`issues-${this.type().toLowerCase()}`, [
       { field: 'severity', header: 'Severity' }, { field: 'instanceId', header: 'Instance id' },
       { field: 'instanceName', header: 'Instance' }, { field: 'processName', header: 'Process' },
-      { field: 'activityId', header: 'Step' }, { field: 'since', header: 'Since' },
+      { field: 'activityId', header: 'Step id' }, { field: 'activityName', header: 'Step name' },
+      { field: 'activityType', header: 'Step type' }, { field: 'activityStatus', header: 'Step status' },
+      { field: 'since', header: 'Since' },
       { field: 'detail', header: 'Detail' }, { field: 'requestId', header: 'Request' }
     ], rows);
   }

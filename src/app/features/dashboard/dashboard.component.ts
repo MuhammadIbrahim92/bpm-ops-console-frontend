@@ -7,7 +7,9 @@ import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
 import { ISSUE_INFO, ISSUE_ORDER } from '../../core/issue-info';
 import { Issue, IssueType } from '../../core/models';
+import { activityTypeLabel, engineActivityLook } from '../../core/status';
 import { AgePipe } from '../../shared/pipes';
+import { StatusBadgeComponent } from '../../shared/status-badge.component';
 
 interface Tile {
   type: IssueType;
@@ -19,7 +21,7 @@ interface Tile {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, MessageModule, TableModule, AgePipe],
+  imports: [RouterLink, MessageModule, TableModule, StatusBadgeComponent, AgePipe],
   template: `
     <div class="mb-4">
       <div class="font-semibold text-2xl">What needs attention</div>
@@ -58,7 +60,10 @@ interface Tile {
             <tr>
               <th pSortableColumn="instanceName" pResizableColumn>Instance <p-sortIcon field="instanceName" /><p-columnFilter type="text" field="instanceName" display="menu" /></th>
               <th pSortableColumn="processName" pResizableColumn>Process <p-sortIcon field="processName" /><p-columnFilter type="text" field="processName" display="menu" /></th>
-              <th pSortableColumn="activityId" pResizableColumn>Step <p-sortIcon field="activityId" /><p-columnFilter type="text" field="activityId" display="menu" /></th>
+              <th pSortableColumn="activityId" pResizableColumn>Step id <p-sortIcon field="activityId" /><p-columnFilter type="text" field="activityId" display="menu" /></th>
+              <th pSortableColumn="activityName" pResizableColumn>Step name <p-sortIcon field="activityName" /><p-columnFilter type="text" field="activityName" display="menu" /></th>
+              <th pSortableColumn="activityType" pResizableColumn>Type <p-sortIcon field="activityType" /></th>
+              <th pSortableColumn="activityStatus" pResizableColumn>Status <p-sortIcon field="activityStatus" /></th>
               <th pSortableColumn="since" pResizableColumn>Since <p-sortIcon field="since" /></th>
               <th pSortableColumn="detail" pResizableColumn>What happened <p-sortIcon field="detail" /><p-columnFilter type="text" field="detail" display="menu" /></th>
             </tr>
@@ -68,12 +73,15 @@ interface Tile {
               <td>@if (i.instanceId) { <a [routerLink]="['/instances', i.instanceId]">{{ i.instanceName || i.instanceId }}</a> }</td>
               <td>{{ i.processName }}</td>
               <td class="mono">{{ i.activityId }}</td>
+              <td>{{ i.activityName }}</td>
+              <td>{{ typeLabel(i.activityType) }}</td>
+              <td>@if (i.activityStatus) { <app-status-badge [look]="statusLook(i.activityStatus)" [text]="i.activityStatus" /> }</td>
               <td class="nowrap">{{ i.since | age }}</td>
               <td>{{ i.detail }}</td>
             </tr>
           </ng-template>
           <ng-template #emptymessage>
-            <tr><td colspan="5">No failed steps. Nothing is waiting on you here.</td></tr>
+            <tr><td colspan="8">No failed steps. Nothing is waiting on you here.</td></tr>
           </ng-template>
         </p-table>
       </div>
@@ -98,6 +106,9 @@ interface Tile {
 export class DashboardComponent implements OnInit {
   readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
+
+  typeLabel = activityTypeLabel;
+  statusLook = engineActivityLook;
 
   readonly tiles = signal<Tile[]>([]);
   readonly failures = signal<Issue[]>([]);
