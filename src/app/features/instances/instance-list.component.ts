@@ -1,7 +1,12 @@
-import { PagerComponent } from '../../shared/pager.component';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
+import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
+import { SelectModule } from 'primeng/select';
+import { TableModule, TablePageEvent } from 'primeng/table';
 import { ApiService, InstanceQuery } from '../../core/api.service';
 import { describeError } from '../../core/errors';
 import { InstanceSummary, Lookups } from '../../core/models';
@@ -12,78 +17,83 @@ import { StatusBadgeComponent } from '../../shared/status-badge.component';
 @Component({
   selector: 'app-instance-list',
   standalone: true,
-  imports: [PagerComponent, FormsModule, RouterLink, StatusBadgeComponent, DateTimePipe, AgePipe],
+  imports: [FormsModule, RouterLink, ButtonModule, CheckboxModule, InputTextModule, MessageModule, SelectModule,
+    TableModule, StatusBadgeComponent, DateTimePipe, AgePipe],
   template: `
-    <div class="page">
-      <h1>Instances</h1>
-      <p class="sub">Search running and finished process instances. Open one to see where it is on the diagram.</p>
+    <div class="card">
+      <div class="font-semibold text-xl mb-1">Instances</div>
+      <p class="text-muted-color mb-4">Search running and finished process instances. Open one to see where it is on the diagram.</p>
 
-      <form class="card row" (ngSubmit)="search()">
-        <label class="field">Instance id or name
-          <input name="text" [(ngModel)]="f.text" placeholder="e.g. 10442 or Survey">
-        </label>
-        <label class="field">Status
-          <select name="status" [(ngModel)]="f.status">
-            <option value="">Any</option>
-            @for (s of lookups()?.instanceStatuses ?? []; track s) { <option [value]="s">{{ s }}</option> }
-          </select>
-        </label>
-        <label class="field">Process
-          <select name="processId" [(ngModel)]="f.processId">
-            <option [ngValue]="null">All processes</option>
-            @for (p of lookups()?.processes ?? []; track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
-          </select>
-        </label>
-        <label class="field">Created from
-          <input name="from" type="date" [(ngModel)]="f.from">
-        </label>
-        <label class="field">Created to
-          <input name="to" type="date" [(ngModel)]="f.to">
-        </label>
-        <label class="field">Open longer than (hours)
-          <input name="older" type="number" min="1" [(ngModel)]="f.olderThanHours">
-        </label>
-        <label class="field">
-          <span><input name="test" type="checkbox" [(ngModel)]="f.includeTest"> Include test instances</span>
-        </label>
-        <button class="btn primary" type="submit">Search</button>
-        <button class="btn" type="button" (click)="reset()">Clear</button>
-      </form>
-
-      @if (error()) { <p class="alert" role="alert">{{ error() }}</p> }
-
-      <div class="card list">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Id</th><th>Name</th><th>Process</th><th>Status</th><th class="right">Running</th><th class="right">Failed</th><th>Created</th><th>Open for</th><th>By</th></tr>
-            </thead>
-            <tbody>
-              @for (i of items(); track i.id) {
-                <tr>
-                  <td class="nowrap"><a [routerLink]="['/instances', i.id]">{{ i.id }}</a></td>
-                  <td>{{ i.name }} @if (i.test) { <span class="muted">(test)</span> }</td>
-                  <td>{{ i.processName }} <span class="muted">v{{ i.version }}</span></td>
-                  <td><app-status-badge [look]="look(i.status)" [text]="i.status" /></td>
-                  <td class="right">{{ i.runningActivities }}</td>
-                  <td class="right">@if (i.failedActivities > 0) { <strong class="bad">{{ i.failedActivities }}</strong> } @else { 0 }</td>
-                  <td class="nowrap">{{ i.created | dateTime }}</td>
-                  <td class="nowrap">@if (!i.finished) { {{ i.created | age }} } @else { <span class="muted">finished</span> }</td>
-                  <td>{{ i.createdBy }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
+      <form class="grid grid-cols-12 gap-4 items-end" (ngSubmit)="search()">
+        <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
+          <label for="text">Instance id or name</label>
+          <input pInputText id="text" name="text" [(ngModel)]="f.text" placeholder="e.g. 10442 or Survey" fluid />
         </div>
-        @if (!loading() && items().length === 0) { <p class="empty">No instances match.</p> }
-        @if (loading()) { <p class="empty" role="status">Loading&hellip;</p> }
+        <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
+          <label for="status">Status</label>
+          <p-select inputId="status" name="status" [(ngModel)]="f.status" [options]="statusOptions()" optionLabel="label"
+            optionValue="value" placeholder="Any" [showClear]="true" fluid />
+        </div>
+        <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
+          <label for="processId">Process</label>
+          <p-select inputId="processId" name="processId" [(ngModel)]="f.processId" [options]="lookups()?.processes ?? []"
+            optionLabel="name" optionValue="id" placeholder="All processes" [showClear]="true" [filter]="true" fluid />
+        </div>
+        <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
+          <label for="from">Created from</label>
+          <input pInputText id="from" name="from" type="date" [(ngModel)]="f.from" fluid />
+        </div>
+        <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
+          <label for="to">Created to</label>
+          <input pInputText id="to" name="to" type="date" [(ngModel)]="f.to" fluid />
+        </div>
+        <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
+          <label for="older">Open longer than (hours)</label>
+          <input pInputText id="older" name="older" type="number" min="1" [(ngModel)]="f.olderThanHours" fluid />
+        </div>
+        <div class="col-span-6 md:col-span-3 flex items-center gap-2 pb-2">
+          <p-checkbox inputId="test" name="test" [(ngModel)]="f.includeTest" [binary]="true" />
+          <label for="test">Include test instances</label>
+        </div>
+        <div class="col-span-12 flex gap-2">
+          <p-button type="submit" label="Search" icon="pi pi-search" />
+          <p-button type="button" label="Clear" severity="secondary" [outlined]="true" (onClick)="reset()" />
+        </div>
+      </form>
+    </div>
 
-        <app-pager [total]="total()" [page]="page()" [size]="size()" noun="found" (pageChange)="go($event)" (sizeChange)="setSize($event)" />
-      </div>
+    <div class="card">
+      @if (error()) { <p-message severity="error" [text]="error()!" styleClass="mb-4" /> }
+      <p-table [value]="items()" dataKey="id" [lazy]="true" [loading]="loading()" [paginator]="true" [rows]="size()"
+        [first]="page() * size()" [totalRecords]="total()" [rowsPerPageOptions]="[25, 50, 100, 200]"
+        [showCurrentPageReport]="true" currentPageReportTemplate="{first} to {last} of {totalRecords} instances"
+        [rowHover]="true" [tableStyle]="{ 'min-width': '60rem' }" (onPage)="onPage($event)">
+        <ng-template #header>
+          <tr>
+            <th>Id</th><th>Name</th><th>Process</th><th>Status</th>
+            <th class="text-right">Running</th><th class="text-right">Failed</th><th>Created</th><th>Open for</th><th>By</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-i>
+          <tr>
+            <td class="nowrap"><a [routerLink]="['/instances', i.id]">{{ i.id }}</a></td>
+            <td>{{ i.name }} @if (i.test) { <span class="text-muted-color">(test)</span> }</td>
+            <td>{{ i.processName }} <span class="text-muted-color">v{{ i.version }}</span></td>
+            <td><app-status-badge [look]="look(i.status)" [text]="i.status" /></td>
+            <td class="text-right">{{ i.runningActivities }}</td>
+            <td class="text-right">@if (i.failedActivities > 0) { <strong class="bad">{{ i.failedActivities }}</strong> } @else { 0 }</td>
+            <td class="nowrap">{{ i.created | dateTime }}</td>
+            <td class="nowrap">@if (!i.finished) { {{ i.created | age }} } @else { <span class="text-muted-color">finished</span> }</td>
+            <td>{{ i.createdBy }}</td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr><td colspan="9">No instances match.</td></tr>
+        </ng-template>
+      </p-table>
     </div>
   `,
   styles: [`
-    .list { margin-top: 12px; }
     .bad { color: var(--c-failed); }
   `]
 })
@@ -103,6 +113,10 @@ export class InstanceListComponent implements OnInit {
   f = this.blank();
 
   look = instanceLook;
+
+  statusOptions(): { label: string; value: string }[] {
+    return (this.lookups()?.instanceStatuses ?? []).map(s => ({ label: s, value: s }));
+  }
 
   ngOnInit(): void {
     this.api.lookups().subscribe({ next: l => this.lookups.set(l), error: () => undefined });
@@ -124,24 +138,19 @@ export class InstanceListComponent implements OnInit {
   }
 
   search(): void {
-    this.navigate(0);
+    this.navigate(0, this.size());
   }
 
   reset(): void {
     this.f = this.blank();
-    this.navigate(0);
+    this.navigate(0, this.size());
   }
 
-  go(page: number): void {
-    this.navigate(page);
+  onPage(e: TablePageEvent): void {
+    this.navigate(Math.floor(e.first / e.rows), e.rows);
   }
 
-  setSize(size: number): void {
-    this.size.set(size);
-    this.navigate(0);
-  }
-
-  private navigate(page: number): void {
+  private navigate(page: number, size: number): void {
     const f = this.f;
     this.router.navigate([], {
       queryParams: {
@@ -153,7 +162,7 @@ export class InstanceListComponent implements OnInit {
         olderThanHours: f.olderThanHours,
         includeTest: f.includeTest ? 'true' : null,
         page: page > 0 ? page : null,
-        size: this.size() !== 50 ? this.size() : null
+        size: size !== 50 ? size : null
       }
     });
   }

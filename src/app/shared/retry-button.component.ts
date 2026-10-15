@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { ButtonModule } from 'primeng/button';
 import { ApiService } from '../core/api.service';
 import { describeError } from '../core/errors';
 import { RequestRow } from '../core/models';
@@ -7,13 +8,14 @@ import { RequestRow } from '../core/models';
 @Component({
   selector: 'app-retry-button',
   standalone: true,
+  imports: [ButtonModule],
   template: `
     @if (state() === 'idle') {
-      <button type="button" class="btn small" [disabled]="!enabled" [title]="enabled ? 'Put this request back in the queue' : 'This request cannot be retried'" (click)="state.set('confirm')">Retry</button>
+      <p-button label="Retry" icon="pi pi-replay" size="small" severity="secondary" [outlined]="true" [disabled]="!enabled" (onClick)="state.set('confirm')" />
     } @else if (state() === 'confirm') {
       <span class="nowrap">Run request {{ row.id }} again?
-        <button type="button" class="btn small primary" (click)="go()">Yes, retry</button>
-        <button type="button" class="btn small" (click)="state.set('idle')">Cancel</button>
+        <p-button label="Yes, retry" size="small" (onClick)="go()" />
+        <p-button label="Cancel" size="small" severity="secondary" [text]="true" (onClick)="state.set('idle')" />
       </span>
     } @else if (state() === 'busy') {
       <span class="muted">Retrying&hellip;</span>

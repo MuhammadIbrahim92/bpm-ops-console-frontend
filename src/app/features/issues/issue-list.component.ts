@@ -1,5 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { MessageModule } from 'primeng/message';
+import { TableModule } from 'primeng/table';
+import { TabsModule } from 'primeng/tabs';
+import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
@@ -10,48 +14,51 @@ import { AgePipe, DateTimePipe } from '../../shared/pipes';
 @Component({
   selector: 'app-issue-list',
   standalone: true,
-  imports: [RouterLink, AgePipe, DateTimePipe],
+  imports: [RouterLink, MessageModule, TableModule, TabsModule, TagModule, AgePipe, DateTimePipe],
   template: `
-    <div class="page">
-      <h1>Issues</h1>
-      <p class="sub">Problems found in the engine's own tables, oldest first. The longer something has waited, the higher it sits.</p>
+    <div class="card">
+      <div class="font-semibold text-xl mb-1">Issues</div>
+      <p class="text-muted-color mb-4">Problems found in the engine's own tables, oldest first. The longer something has waited, the higher it sits.</p>
 
-      <div class="tabs" role="tablist">
-        @for (t of types(); track t) {
-          <button class="tab" role="tab" [attr.aria-selected]="t === type()" (click)="choose(t)">
-            {{ info[t].title }}
-            @if (counts()[t] !== undefined) { <span class="muted">({{ counts()[t] }})</span> }
-          </button>
-        }
-      </div>
+      <p-tabs [value]="type()" (valueChange)="choose($any($event))" [scrollable]="true">
+        <p-tablist>
+          @for (t of types(); track t) {
+            <p-tab [value]="t">
+              {{ info[t].title }}
+              @if (counts()[t] !== undefined) { <span class="ml-2 text-muted-color">({{ counts()[t] }})</span> }
+            </p-tab>
+          }
+        </p-tablist>
+      </p-tabs>
 
-      <p class="muted">{{ info[type()].hint }}</p>
-      @if (error()) { <p class="alert" role="alert">{{ error() }}</p> }
+      <p class="text-muted-color my-4">{{ info[type()].hint }}</p>
+      @if (error()) { <p-message severity="error" [text]="error()!" styleClass="mb-4" /> }
 
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Severity</th><th>Instance</th><th>Process</th><th>Step</th><th>Since</th><th>Detail</th>@if (auth.can('VIEW_REQUESTS')) { <th>Request</th> }</tr></thead>
-            <tbody>
-              @for (i of items(); track $index) {
-                <tr>
-                  <td><span [class]="'sev-' + i.severity">{{ i.severity }}</span></td>
-                  <td>@if (i.instanceId) { <a [routerLink]="['/instances', i.instanceId]">{{ i.instanceName || i.instanceId }}</a> <span class="muted">#{{ i.instanceId }}</span> }</td>
-                  <td>{{ i.processName }}</td>
-                  <td class="mono">{{ i.activityId }}</td>
-                  <td class="nowrap" [title]="i.since | dateTime">{{ i.since | age }}</td>
-                  <td>{{ i.detail }}</td>
-                  @if (auth.can('VIEW_REQUESTS')) {
-                    <td>@if (i.requestId) { <a [routerLink]="['/requests']" [queryParams]="{ text: i.requestId }">#{{ i.requestId }}</a> }</td>
-                  }
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        @if (loading()) { <p class="empty" role="status">Loading&hellip;</p> }
-        @else if (items().length === 0) { <p class="empty">Nothing found. All clear for this check.</p> }
-      </div>
+      <p-table [value]="items()" [loading]="loading()" [paginator]="items().length > 25" [rows]="25"
+        [rowsPerPageOptions]="[25, 50, 100]" [rowHover]="true" [tableStyle]="{ 'min-width': '60rem' }">
+        <ng-template #header>
+          <tr>
+            <th>Severity</th><th>Instance</th><th>Process</th><th>Step</th><th>Since</th><th>Detail</th>
+            @if (auth.can('VIEW_REQUESTS')) { <th>Request</th> }
+          </tr>
+        </ng-template>
+        <ng-template #body let-i>
+          <tr>
+            <td><p-tag [value]="i.severity" [severity]="severity(i.severity)" /></td>
+            <td>@if (i.instanceId) { <a [routerLink]="['/instances', i.instanceId]">{{ i.instanceName || i.instanceId }}</a> <span class="text-muted-color">#{{ i.instanceId }}</span> }</td>
+            <td>{{ i.processName }}</td>
+            <td class="mono">{{ i.activityId }}</td>
+            <td class="nowrap" [title]="i.since | dateTime">{{ i.since | age }}</td>
+            <td>{{ i.detail }}</td>
+            @if (auth.can('VIEW_REQUESTS')) {
+              <td>@if (i.requestId) { <a [routerLink]="['/requests']" [queryParams]="{ text: i.requestId }">#{{ i.requestId }}</a> }</td>
+            }
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr><td [attr.colspan]="auth.can('VIEW_REQUESTS') ? 7 : 6">Nothing found. All clear for this check.</td></tr>
+        </ng-template>
+      </p-table>
     </div>
   `
 })
@@ -84,8 +91,24 @@ export class IssueListComponent implements OnInit {
     });
   }
 
-  choose(t: IssueType): void {
-    this.router.navigate([], { queryParams: { type: t } });
+  choose(t: string | number | undefined): void {
+    if (isIssueType(String(t))) {
+      this.router.navigate([], { queryParams: { type: t } });
+    }
+  }
+
+  severity(s: string | undefined): 'danger' | 'warn' | 'info' | 'secondary' {
+    switch ((s ?? '').toUpperCase()) {
+      case 'HIGH':
+      case 'CRITICAL':
+        return 'danger';
+      case 'MEDIUM':
+        return 'warn';
+      case 'LOW':
+        return 'info';
+      default:
+        return 'secondary';
+    }
   }
 
   private load(): void {
