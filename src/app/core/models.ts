@@ -238,6 +238,8 @@ export interface StepRow {
   activityId: string;
   status?: string;
   taskType?: string;
+  /** The engine request that ran the step (EXC_ACTIVITY_INSTANCE.REQUEST_UUID); shown for service tasks. */
+  requestUuid?: string;
   creation?: string;
   start?: string;
   finish?: string;

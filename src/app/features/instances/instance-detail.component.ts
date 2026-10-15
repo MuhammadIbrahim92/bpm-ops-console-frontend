@@ -153,6 +153,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
                 @if (stepCol('activityId')) { <th pSortableColumn="activityId" pResizableColumn>Step <p-sortIcon field="activityId" /></th> }
                 @if (stepCol('taskType')) { <th pSortableColumn="taskType" pResizableColumn>Type <p-sortIcon field="taskType" /></th> }
                 @if (stepCol('status')) { <th pSortableColumn="status" pResizableColumn>Status <p-sortIcon field="status" /></th> }
+                @if (stepCol('requestUuid')) { <th pSortableColumn="requestUuid" pResizableColumn>Request UUID <p-sortIcon field="requestUuid" /></th> }
                 @if (stepCol('start')) { <th pSortableColumn="start" pResizableColumn>Started <p-sortIcon field="start" /></th> }
                 @if (stepCol('finish')) { <th pSortableColumn="finish" pResizableColumn>Finished <p-sortIcon field="finish" /></th> }
               </tr>
@@ -167,6 +168,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
                 @if (stepCol('activityId')) { <td><span class="mono">{{ a.activityId }}</span> @if (stepName(a.activityId); as nm) { <span class="text-muted-color">{{ nm }}</span> }</td> }
                 @if (stepCol('taskType')) { <td>@if (typeOf(a); as ty) { <p-tag [value]="ty" severity="secondary" /> }</td> }
                 @if (stepCol('status')) { <td><app-status-badge [look]="actLook(statusOf(a))" [text]="a.status" /></td> }
+                @if (stepCol('requestUuid')) { <td class="mono">{{ isService(a) ? (a.requestUuid || '-') : '' }}</td> }
                 @if (stepCol('start')) { <td class="nowrap">{{ (a.start || a.creation) | dateTime }}</td> }
                 @if (stepCol('finish')) { <td class="nowrap">{{ a.finish | dateTime }}</td> }
               </tr>
@@ -247,6 +249,14 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
           } @else if (popupSteps().length === 0 && !pu.isStart) {
             <p class="text-muted-color">This step has not run in this instance.</p>
           }
+          @if (pu.type === 'Service task' && popupSteps().length > 0) {
+            <div class="font-semibold mb-2 mt-3">Request UUID</div>
+            <ul class="plain mono mb-3">
+              @for (e of popupSteps(); track e.activityInstanceId; let ix = $index) {
+                <li>@if (popupSteps().length > 1) { <span class="text-muted-color">#{{ ix + 1 }} </span> }{{ e.requestUuid || '-' }}</li>
+              }
+            </ul>
+          }
           @if (popupSteps().length > 1) {
             <label class="flex items-center gap-2 mb-3 font-semibold">Execution
               <select class="border border-surface rounded-border p-2 bg-surface-0 dark:bg-surface-900" (change)="pickExecution($event)">
@@ -311,6 +321,7 @@ export class InstanceDetailComponent implements OnInit {
     { field: 'activityId', header: 'Step' },
     { field: 'taskType', header: 'Type' },
     { field: 'status', header: 'Status' },
+    { field: 'requestUuid', header: 'Request UUID' },
     { field: 'start', header: 'Started' },
     { field: 'finish', header: 'Finished' }
   ];
@@ -455,7 +466,7 @@ export class InstanceDetailComponent implements OnInit {
     downloadCsv(`instance-${this.id}-steps`, [
       { field: 'activityInstanceId', header: 'Activity instance' }, { field: 'activityId', header: 'Step' },
       { field: 'taskType', header: 'Task type' }, { field: 'status', header: 'Status' },
-      { field: 'creation', header: 'Created' }, { field: 'start', header: 'Started' },
+      { field: 'requestUuid', header: 'Request UUID' }, { field: 'creation', header: 'Created' }, { field: 'start', header: 'Started' },
       { field: 'finish', header: 'Finished' }
     ], this.activities());
   }
@@ -599,6 +610,11 @@ export class InstanceDetailComponent implements OnInit {
         error: e => this.startFormError.set(e?.status === 404 ? 'This instance has no saved start form.' : describeError(e))
       });
     }
+  }
+
+  /** A service task: the diagram says so (or the type label does). The REQUEST_UUID is shown for these. */
+  isService(a: StepRow): boolean {
+    return this.typeOf(a) === 'Service task';
   }
 
   /** Task type annotation: the drawing's node type when known, else the work item task type. */
