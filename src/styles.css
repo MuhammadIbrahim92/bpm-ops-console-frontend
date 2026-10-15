@@ -36,84 +36,11 @@
   --shadow: none;
 }
 
-* { box-sizing: border-box; }
-
-html, body { margin: 0; }
-
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-h1 { font-size: 20px; margin: 0 0 4px; }
-h2 { font-size: 16px; margin: 0 0 8px; }
-.sub { color: var(--muted); margin: 0 0 16px; }
 .muted { color: var(--muted); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
 .nowrap { white-space: nowrap; }
-.right { text-align: right; }
 
-.page { max-width: 1280px; margin: 0 auto; padding: 0; }
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 16px;
-}
-
-.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
-.spacer { flex: 1 1 auto; }
-
-label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
-input, select {
-  font: inherit;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 7px 9px;
-  min-width: 120px;
-}
-input[type="checkbox"] { min-width: 0; }
-
-.btn {
-  font: inherit;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  border-radius: 6px;
-  padding: 7px 12px;
-  cursor: pointer;
-}
-.btn:hover:not(:disabled) { background: var(--surface-2); }
-.btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
-.btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
-.btn.small { padding: 3px 9px; font-size: 12.5px; }
-.btn.danger { border-color: var(--danger); color: var(--danger); }
-
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
-tbody tr:hover { background: var(--surface-2); }
-.table-wrap { overflow-x: auto; }
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--st, var(--border));
-  color: var(--st, var(--text));
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
+/* Step colours used by the diagram nodes (--st is read by the SVG styles). */
 .st-running { --st: var(--c-running); }
 .st-done { --st: var(--c-done); }
 .st-failed { --st: var(--c-failed); }
@@ -123,44 +50,3 @@ tbody tr:hover { background: var(--surface-2); }
 .st-idle { --st: var(--c-idle); }
 .st-unknown { --st: var(--c-unknown); }
 .st-terminated { --st: var(--c-terminated); }
-
-.sev-HIGH { color: var(--c-failed); font-weight: 700; }
-.sev-MEDIUM { color: var(--c-timeout); font-weight: 700; }
-.sev-LOW { color: var(--muted); }
-
-.alert {
-  border: 1px solid var(--danger);
-  color: var(--danger);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  background: var(--surface);
-  margin: 0 0 12px;
-}
-.note {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  background: var(--surface-2);
-  margin: 0 0 12px;
-}
-
-.pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; color: var(--muted); }
-
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 12px; flex-wrap: wrap; }
-.tab {
-  font: inherit;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  padding: 8px 12px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  font-weight: 600;
-}
-.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
-
-.empty { text-align: center; color: var(--muted); padding: 28px 0; }
-
-@media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
-}

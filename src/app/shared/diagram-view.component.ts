@@ -1,3 +1,5 @@
+import { ButtonModule } from 'primeng/button';
+import { TagModule } from 'primeng/tag';
 import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, ViewChild } from '@angular/core';
 import { ActivityState, DiagramGraph, DiagramNode, Overlay } from '../core/models';
 import {
@@ -35,18 +37,19 @@ interface DrawEdge {
 @Component({
   selector: 'app-diagram-view',
   standalone: true,
+  imports: [ButtonModule, TagModule],
   template: `
     <div class="dv-toolbar">
-      <button type="button" class="btn small" (click)="zoom(1.25)" aria-label="Zoom in">+</button>
-      <button type="button" class="btn small" (click)="zoom(0.8)" aria-label="Zoom out">&minus;</button>
-      <button type="button" class="btn small" (click)="fit()">Fit</button>
-      <span class="spacer"></span>
+      <p-button type="button" icon="pi pi-search-plus" size="small" severity="secondary" [outlined]="true" (onClick)="zoom(1.25)" ariaLabel="Zoom in" />
+      <p-button type="button" icon="pi pi-search-minus" size="small" severity="secondary" [outlined]="true" (onClick)="zoom(0.8)" ariaLabel="Zoom out" />
+      <p-button type="button" label="Fit" icon="pi pi-expand" size="small" severity="secondary" [outlined]="true" (onClick)="fit()" />
+      <span class="dv-spacer"></span>
       <span class="dv-legend" aria-label="Legend">
-        <span class="badge st-running"><span aria-hidden="true">&#9654;</span>Running</span>
-        <span class="badge st-done"><span aria-hidden="true">&#10003;</span>Completed</span>
-        <span class="badge st-failed"><span aria-hidden="true">&#10005;</span>Failed</span>
-        <span class="badge st-suspended"><span aria-hidden="true">&#9208;</span>Suspended</span>
-        <span class="badge st-idle">Not reached</span>
+        <p-tag severity="info" value="&#9654; Running" />
+        <p-tag severity="success" value="&#10003; Completed" />
+        <p-tag severity="danger" value="&#10005; Failed" />
+        <p-tag severity="warn" value="&#9208; Suspended" />
+        <p-tag severity="secondary" value="Not reached" />
       </span>
     </div>
     <svg #svg class="dv-svg" [attr.viewBox]="vbText" role="group" aria-label="Process diagram with instance state"
@@ -104,6 +107,7 @@ interface DrawEdge {
     :host { display: block; }
     .dv-toolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
     .dv-legend { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dv-spacer { flex: 1 1 auto; }
     .dv-svg {
       width: 100%;
       height: 62vh;

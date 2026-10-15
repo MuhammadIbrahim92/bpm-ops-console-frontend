@@ -1,5 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MessageModule } from 'primeng/message';
+import { TableModule } from 'primeng/table';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
@@ -17,70 +19,73 @@ interface Tile {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, AgePipe],
+  imports: [RouterLink, MessageModule, TableModule, AgePipe],
   template: `
-    <div class="page">
-      <h1>What needs attention</h1>
-      <p class="sub">
+    <div class="mb-4">
+      <div class="font-semibold text-2xl">What needs attention</div>
+      <p class="text-muted-color mt-1">
         @if (auth.operations()) { Every instance in the engine. } @else { Instances you are involved in. }
       </p>
-
-      @if (error()) { <p class="alert" role="alert">{{ error() }}</p> }
-
-      @if (auth.can('VIEW_ISSUES')) {
-        <div class="tiles">
-          @for (t of tiles(); track t.type) {
-            <a class="tile card" [class.hot]="t.count > 0" [routerLink]="['/issues']" [queryParams]="{ type: t.type }">
-              <span class="count">{{ t.count }}</span>
-              <span class="title">{{ t.title }}</span>
-              <span class="hint">{{ t.hint }}</span>
-            </a>
-          }
-        </div>
-
-        <section class="card">
-          <h2>Oldest failed steps</h2>
-          @if (failures().length === 0 && !loading()) {
-            <p class="empty">No failed steps. Nothing is waiting on you here.</p>
-          } @else {
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Instance</th><th>Process</th><th>Step</th><th>Since</th><th>What happened</th></tr></thead>
-                <tbody>
-                  @for (i of failures(); track $index) {
-                    <tr>
-                      <td>@if (i.instanceId) { <a [routerLink]="['/instances', i.instanceId]">{{ i.instanceName || i.instanceId }}</a> }</td>
-                      <td>{{ i.processName }}</td>
-                      <td class="mono">{{ i.activityId }}</td>
-                      <td class="nowrap">{{ i.since | age }}</td>
-                      <td>{{ i.detail }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-        </section>
-      } @else {
-        <p class="note">Your account can open instances but has no permission to see issues.</p>
-      }
-
-      @if (auth.can('VIEW_INSTANCES')) {
-        <p><a routerLink="/instances">Browse all instances</a>
-          &middot; <a routerLink="/instances" [queryParams]="{ olderThanHours: 24 }">Open for more than a day</a>
-          @if (longOpen() !== null) { <span class="muted">({{ longOpen() }})</span> }
-        </p>
-      }
     </div>
+
+    @if (error()) { <p-message severity="error" [text]="error()!" styleClass="mb-4" /> }
+
+    @if (auth.can('VIEW_ISSUES')) {
+      <div class="grid grid-cols-12 gap-4">
+        @for (t of tiles(); track t.type) {
+          <a class="col-span-12 md:col-span-6 xl:col-span-3 tile" [routerLink]="['/issues']" [queryParams]="{ type: t.type }">
+            <div class="card mb-0 h-full">
+              <div class="flex justify-between items-start">
+                <div>
+                  <span class="block text-muted-color font-medium mb-2">{{ t.title }}</span>
+                  <div class="text-4xl font-semibold" [class.hot]="t.count > 0">{{ t.count }}</div>
+                </div>
+                <div class="flex items-center justify-center bg-surface-100 dark:bg-surface-800 rounded-border" style="width: 2.5rem; height: 2.5rem">
+                  <i class="pi pi-exclamation-triangle" [class.hot]="t.count > 0"></i>
+                </div>
+              </div>
+              <span class="text-muted-color text-sm block mt-3">{{ t.hint }}</span>
+            </div>
+          </a>
+        }
+      </div>
+
+      <div class="card mt-4">
+        <div class="font-semibold text-xl mb-4">Oldest failed steps</div>
+        <p-table [value]="failures()" [loading]="loading()" [rowHover]="true" [tableStyle]="{ 'min-width': '40rem' }">
+          <ng-template #header>
+            <tr><th>Instance</th><th>Process</th><th>Step</th><th>Since</th><th>What happened</th></tr>
+          </ng-template>
+          <ng-template #body let-i>
+            <tr>
+              <td>@if (i.instanceId) { <a [routerLink]="['/instances', i.instanceId]">{{ i.instanceName || i.instanceId }}</a> }</td>
+              <td>{{ i.processName }}</td>
+              <td class="mono">{{ i.activityId }}</td>
+              <td class="nowrap">{{ i.since | age }}</td>
+              <td>{{ i.detail }}</td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr><td colspan="5">No failed steps. Nothing is waiting on you here.</td></tr>
+          </ng-template>
+        </p-table>
+      </div>
+    } @else {
+      <p-message severity="info" text="Your account can open instances but has no permission to see issues." styleClass="mb-4" />
+    }
+
+    @if (auth.can('VIEW_INSTANCES')) {
+      <p class="mt-4">
+        <a routerLink="/instances">Browse all instances</a>
+        &middot; <a routerLink="/instances" [queryParams]="{ olderThanHours: 24 }">Open for more than a day</a>
+        @if (longOpen() !== null) { <span class="text-muted-color">({{ longOpen() }})</span> }
+      </p>
+    }
   `,
   styles: [`
-    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-bottom: 16px; }
-    .tile { display: flex; flex-direction: column; gap: 2px; color: var(--text); }
-    .tile:hover { text-decoration: none; border-color: var(--accent); }
-    .count { font-size: 30px; font-weight: 700; line-height: 1.1; }
-    .tile.hot .count { color: var(--c-failed); }
-    .title { font-weight: 600; }
-    .hint { color: var(--muted); font-size: 12.5px; }
+    .tile { color: inherit; text-decoration: none; }
+    .tile:hover .card { border-color: var(--primary-color); }
+    .hot { color: var(--c-failed); }
   `]
 })
 export class DashboardComponent implements OnInit {
