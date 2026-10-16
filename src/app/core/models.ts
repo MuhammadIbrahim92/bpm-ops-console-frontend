@@ -114,6 +114,7 @@ export type IssueType =
   | 'SUSPENDED_INSTANCE' | 'ORPHAN_INSTANCE' | 'STUCK_REQUEST';
 
 export interface Issue {
+  activityInstanceId?: number;
   activityName?: string;
   activityStatus?: string;
   activityType?: string;
@@ -246,4 +247,36 @@ export interface StepRow {
   creation?: string;
   start?: string;
   finish?: string;
+}
+
+/** What bulk retry is asked to retry: a failed activity instance, or a whole process instance. */
+export interface BulkTarget {
+  activityInstanceId?: number | null;
+  instanceId?: number | null;
+}
+
+export interface BulkRow {
+  instanceId?: number;
+  activityInstanceIds: number[];
+  activities?: string;
+  requestId?: number;
+  requestType?: string;
+  requestStatus?: string;
+  requestDate?: string;
+  command?: string;
+  outcome: 'READY' | 'RETRIED' | 'SKIPPED' | 'FAILED';
+  reason?: string;
+}
+
+export interface BulkResult {
+  rows: BulkRow[];
+  ready: number;
+  retried: number;
+  skipped: number;
+  failed: number;
+}
+
+export interface BulkImport {
+  targets: BulkTarget[];
+  warnings: string[];
 }

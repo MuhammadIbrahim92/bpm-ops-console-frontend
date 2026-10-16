@@ -8,17 +8,19 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
 import { ISSUE_INFO, ISSUE_ORDER, isIssueType } from '../../core/issue-info';
-import { Issue, IssueType } from '../../core/models';
+import { BulkTarget, Issue, IssueType } from '../../core/models';
 import { downloadCsv } from '../../shared/csv';
 import { activityTypeLabel, engineActivityLook } from '../../core/status';
 import { AgePipe, DateTimePipe } from '../../shared/pipes';
 import { StatusBadgeComponent } from '../../shared/status-badge.component';
+import { BulkRetryDialogComponent } from '../../shared/bulk-retry-dialog.component';
+import { ButtonModule } from 'primeng/button';
 import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
 
 @Component({
   selector: 'app-issue-list',
   standalone: true,
-  imports: [RouterLink, MessageModule, TableModule, TabsModule, TagModule, TableToolsComponent, StatusBadgeComponent, AgePipe, DateTimePipe],
+  imports: [RouterLink, MessageModule, TableModule, TabsModule, TagModule, ButtonModule, BulkRetryDialogComponent, TableToolsComponent, StatusBadgeComponent, AgePipe, DateTimePipe],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1">Issues</div>
@@ -41,13 +43,27 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
       <app-table-tools [columns]="columns" [visible]="visible()" (visibleChange)="visible.set($event)"
         (searchChange)="dt.filterGlobal($event, 'contains')" (exportCsv)="export(dt)" (clear)="clearAll(dt)" />
 
-      <p-table #dt [value]="items()" [loading]="loading()" [paginator]="items().length > 25" [rows]="25"
+      @if (canBulkRetry()) {
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <p-button type="button" icon="pi pi-replay" [label]="'Retry latest request of selected (' + selected.length + ')'"
+            [disabled]="selected.length === 0" (onClick)="retrySelected()" />
+          <p-button type="button" icon="pi pi-file-excel" label="Import Excel / CSV" severity="secondary" [outlined]="true"
+            [loading]="importing()" (onClick)="fileInput.click()" />
+          <input #fileInput type="file" accept=".xlsx,.xlsm,.csv" class="hidden" (change)="onFile($event)" aria-label="Choose a sheet" />
+          <p-button type="button" icon="pi pi-download" label="Template" severity="secondary" [text]="true" (onClick)="template()" />
+          <span class="text-muted-color text-sm">Tick failed steps, or import a sheet with ACTIVITY_INSTANCE_ID and/or INSTANCE_ID. You review everything before anything is changed.</span>
+        </div>
+        @if (importError()) { <p-message severity="error" [text]="importError()!" styleClass="mb-3" /> }
+      }
+
+      <p-table #dt [value]="items()" dataKey="activityInstanceId" [(selection)]="selected" [loading]="loading()" [paginator]="items().length > 25" [rows]="25"
         [rowsPerPageOptions]="[25, 50, 100]" [rowHover]="true" [stripedRows]="true" [resizableColumns]="true"
         columnResizeMode="expand" [scrollable]="true" [sortField]="'since'" [sortOrder]="1"
         [globalFilterFields]="['severity', 'instanceName', 'instanceId', 'processName', 'activityId', 'activityName', 'activityType', 'activityStatus', 'detail']"
         [tableStyle]="{ 'min-width': '60rem' }">
         <ng-template #header>
           <tr>
+            @if (canBulkRetry()) { <th style="width: 3rem"><p-tableHeaderCheckbox /></th> }
             @if (col('severity')) { <th pSortableColumn="severity" pResizableColumn>Severity <p-sortIcon field="severity" /><p-columnFilter type="text" field="severity" display="menu" /></th> }
             @if (col('instanceName')) { <th pSortableColumn="instanceName" pResizableColumn>Instance <p-sortIcon field="instanceName" /><p-columnFilter type="text" field="instanceName" display="menu" /></th> }
             @if (col('processName')) { <th pSortableColumn="processName" pResizableColumn>Process <p-sortIcon field="processName" /><p-columnFilter type="text" field="processName" display="menu" /></th> }
@@ -62,6 +78,7 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
         </ng-template>
         <ng-template #body let-i>
           <tr>
+            @if (canBulkRetry()) { <td><p-tableCheckbox [value]="i" /></td> }
             @if (col('severity')) { <td><p-tag [value]="i.severity" [severity]="severity(i.severity)" /></td> }
             @if (col('instanceName')) { <td>@if (i.instanceId) { <a [routerLink]="['/instances', i.instanceId]">{{ i.instanceName || i.instanceId }}</a> <span class="text-muted-color">#{{ i.instanceId }}</span> }</td> }
             @if (col('processName')) { <td>{{ i.processName }}</td> }
@@ -77,9 +94,10 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
           </tr>
         </ng-template>
         <ng-template #emptymessage>
-          <tr><td [attr.colspan]="visible().length || 1">Nothing found. All clear for this check.</td></tr>
+          <tr><td [attr.colspan]="(visible().length || 1) + 1">Nothing found. All clear for this check.</td></tr>
         </ng-template>
       </p-table>
+      <app-bulk-retry-dialog [targets]="bulkTargets()" [warnings]="importWarnings()" (closed)="closeBulk()" (changed)="afterRetry()" />
     </div>
   `
 })
@@ -95,6 +113,11 @@ export class IssueListComponent implements OnInit {
   readonly type = signal<IssueType>('FAILED_ACTIVITY');
   readonly items = signal<Issue[]>([]);
   readonly loading = signal(false);
+  selected: Issue[] = [];
+  readonly bulkTargets = signal<BulkTarget[] | null>(null);
+  readonly importWarnings = signal<string[]>([]);
+  readonly importing = signal(false);
+  readonly importError = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
   readonly columns: ToolColumn[] = [
@@ -110,6 +133,59 @@ export class IssueListComponent implements OnInit {
     { field: 'requestId', header: 'Request' }
   ];
   readonly visible = signal<string[]>(this.columns.map(c => c.field));
+
+  /** Bulk retry is offered on the failed-steps tab, to people who may retry requests. */
+  canBulkRetry(): boolean {
+    return this.type() === 'FAILED_ACTIVITY' && this.auth.can('RETRY_REQUEST');
+  }
+
+  retrySelected(): void {
+    const targets = this.selected
+      .filter(i => i.activityInstanceId != null)
+      .map(i => ({ activityInstanceId: i.activityInstanceId }));
+    if (targets.length > 0) {
+      this.importWarnings.set([]);
+      this.bulkTargets.set(targets);
+    }
+  }
+
+  onFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+    this.importError.set(null);
+    this.importing.set(true);
+    this.api.bulkImport(file).subscribe({
+      next: r => {
+        this.importWarnings.set(r.warnings);
+        this.bulkTargets.set(r.targets);
+        this.importing.set(false);
+      },
+      error: e => { this.importError.set(describeError(e)); this.importing.set(false); }
+    });
+  }
+
+  template(): void {
+    downloadCsv('bulk-retry-template', [
+      { field: 'ACTIVITY_INSTANCE_ID', header: 'ACTIVITY_INSTANCE_ID' },
+      { field: 'INSTANCE_ID', header: 'INSTANCE_ID' }
+    ], []);
+  }
+
+  closeBulk(): void {
+    this.bulkTargets.set(null);
+    this.importWarnings.set([]);
+  }
+
+  /** Something was re-queued: reload the list and the counts, and drop the ticks. */
+  afterRetry(): void {
+    this.selected = [];
+    this.load();
+    this.api.issueSummary().subscribe({ next: s => this.counts.set(s), error: () => undefined });
+  }
 
   col(field: string): boolean {
     return this.visible().includes(field);
@@ -129,6 +205,7 @@ export class IssueListComponent implements OnInit {
     this.route.queryParamMap.subscribe(q => {
       const t = q.get('type');
       this.type.set(isIssueType(t) ? t : 'FAILED_ACTIVITY');
+      this.selected = [];
       this.load();
     });
   }

@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, AttributePage, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, AttributePage, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -112,6 +112,23 @@ export class ApiService {
 
   requests(q: RequestQuery): Observable<Page<RequestRow>> {
     return this.http.get<Page<RequestRow>>(`${this.base}/requests`, { params: toParams({ ...q }) });
+  }
+
+  /** What a bulk retry would do. Changes nothing. */
+  bulkPreview(targets: BulkTarget[]): Observable<BulkResult> {
+    return this.http.post<BulkResult>(`${this.base}/requests/bulk-retry/preview`, { targets });
+  }
+
+  /** Re-queues the latest request of the instance of each named failed activity. */
+  bulkRetry(targets: BulkTarget[]): Observable<BulkResult> {
+    return this.http.post<BulkResult>(`${this.base}/requests/bulk-retry`, { targets });
+  }
+
+  /** Reads ids from an .xlsx or .csv sheet. Changes nothing. */
+  bulkImport(file: File): Observable<BulkImport> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<BulkImport>(`${this.base}/requests/bulk-retry/import`, form);
   }
 
   retry(id: number): Observable<RequestRow> {
