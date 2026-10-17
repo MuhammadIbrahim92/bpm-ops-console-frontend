@@ -7,7 +7,8 @@ export interface IssueInfo {
 
 /** Plain-language names for the detectors, shared by the dashboard and the issue list. */
 export const ISSUE_INFO: Record<IssueType, IssueInfo> = {
-  FAILED_ACTIVITY: { title: 'Failed steps', hint: 'Steps that failed or timed out in instances still open' },
+  FAILED_ACTIVITY: { title: 'Failed steps', hint: 'Steps that failed in instances still open' },
+  TIMED_OUT_ACTIVITY: { title: 'Timed-out steps', hint: 'Steps whose deadline was reached, in instances still open' },
   STUCK_ACTIVITY: { title: 'Stuck automatic steps', hint: 'Automatic steps that have been running for too long' },
   OVERDUE_WORK_ITEM: { title: 'Overdue tasks', hint: 'People tasks past their due date' },
   SUSPENDED_INSTANCE: { title: 'Suspended instances', hint: 'Instances that were suspended and not resumed' },
@@ -16,7 +17,7 @@ export const ISSUE_INFO: Record<IssueType, IssueInfo> = {
 };
 
 export const ISSUE_ORDER: IssueType[] = [
-  'FAILED_ACTIVITY', 'ORPHAN_INSTANCE', 'STUCK_ACTIVITY', 'OVERDUE_WORK_ITEM', 'SUSPENDED_INSTANCE', 'STUCK_REQUEST'
+  'FAILED_ACTIVITY', 'TIMED_OUT_ACTIVITY', 'ORPHAN_INSTANCE', 'STUCK_ACTIVITY', 'OVERDUE_WORK_ITEM', 'SUSPENDED_INSTANCE', 'STUCK_REQUEST'
 ];
 
 export function isIssueType(value: string | null | undefined): value is IssueType {

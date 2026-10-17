@@ -12,7 +12,9 @@ import { DefinitionProcess, DefinitionSource, DefinitionVersion } from '../../co
 import { ProcessData, parseXpdl } from './xpdl';
 import { XpdlCompareComponent } from './xpdl-compare.component';
 import { XpdlDiagramComponent } from './xpdl-diagram.component';
+import { XpdlImpactComponent } from './xpdl-impact.component';
 import { XpdlIntegrationsComponent } from './xpdl-integrations.component';
+import { XpdlSimulateComponent } from './xpdl-simulate.component';
 import { XpdlReportComponent } from './xpdl-report.component';
 import { XpdlScenariosComponent } from './xpdl-scenarios.component';
 
@@ -24,7 +26,7 @@ import { XpdlScenariosComponent } from './xpdl-scenarios.component';
   selector: 'app-process-explorer',
   standalone: true,
   imports: [FormsModule, ButtonModule, MessageModule, SelectModule, TagModule, TabsModule, XpdlDiagramComponent,
-    XpdlCompareComponent, XpdlIntegrationsComponent, XpdlReportComponent, XpdlScenariosComponent],
+    XpdlCompareComponent, XpdlImpactComponent, XpdlIntegrationsComponent, XpdlReportComponent, XpdlScenariosComponent, XpdlSimulateComponent],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1">Process explorer</div>
@@ -80,6 +82,8 @@ import { XpdlScenariosComponent } from './xpdl-scenarios.component';
             <p-tab value="report">Report</p-tab>
             <p-tab value="io">Inputs and outputs</p-tab>
             <p-tab value="scenarios">Scenarios and impact</p-tab>
+            <p-tab value="sim">Simulate</p-tab>
+            <p-tab value="param">Parameter impact</p-tab>
             @if (processId && versions().length > 1) { <p-tab value="compare">Compare versions</p-tab> }
           </p-tablist>
           <p-tabpanels>
@@ -87,6 +91,8 @@ import { XpdlScenariosComponent } from './xpdl-scenarios.component';
             <p-tabpanel value="report"><app-xpdl-report [model]="d" /></p-tabpanel>
             <p-tabpanel value="io"><app-xpdl-integrations [model]="d" /></p-tabpanel>
             <p-tabpanel value="scenarios"><app-xpdl-scenarios [model]="d" /></p-tabpanel>
+            <p-tabpanel value="sim"><app-xpdl-simulate [model]="d" /></p-tabpanel>
+            <p-tabpanel value="param"><app-xpdl-impact [model]="d" /></p-tabpanel>
             @if (processId && versions().length > 1) {
               <p-tabpanel value="compare">
                 <app-xpdl-compare [source]="source" [processId]="processId" [versions]="versions()" [current]="version" />

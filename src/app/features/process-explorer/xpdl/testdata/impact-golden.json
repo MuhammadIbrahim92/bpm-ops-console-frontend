@@ -1,0 +1,301 @@
+[
+ {
+  "file": "p4177-v5.xml",
+  "vars": [
+   {
+    "v": "Approved",
+    "all": 16,
+    "lits": [
+     "Approval"
+    ],
+    "taint": [
+     "Approved"
+    ],
+    "conds": [
+     [
+      "Check_Approval",
+      "HR_Business_Request_Confirmation",
+      "[Approved]=\"Approval\"",
+      true,
+      []
+     ]
+    ],
+    "readers": [],
+    "passed": [
+     [
+      "Confirm_Vacation_Request",
+      "Approved"
+     ]
+    ],
+    "run": [
+     {
+      "val": "Approval",
+      "partial": false,
+      "found": [
+       [
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>Approve_Request_IN_24_HRS",
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”",
+        "timeout on “Confirm_Vacation_Request”"
+       ],
+       [
+        "“Confrim_In_1_Hour” after “HR_Business_Request_Confirmation”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>HR_Business_Request_Confirmation>Confrim_In_1_Hour",
+        "“Confrim_In_1_Hour” after “HR_Business_Request_Confirmation”",
+        "timeout on “HR_Business_Request_Confirmation”"
+       ],
+       [
+        "“HR_Business_Request_Confirmation” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>HR_Business_Request_Confirmation",
+        "“HR_Business_Request_Confirmation” after “Confirm_Vacation_Request”",
+        "Received = any other value"
+       ]
+      ]
+     },
+     {
+      "val": "__other__",
+      "partial": false,
+      "found": [
+       [
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>Approve_Request_IN_24_HRS",
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”",
+        "timeout on “Confirm_Vacation_Request”"
+       ],
+       [
+        "“Confirm_Vacation_Request” after “Prepare_Request_DTO”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request",
+        "“Confirm_Vacation_Request” after “Prepare_Request_DTO”",
+        ""
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "file": "p4177-v6.xml",
+  "vars": [
+   {
+    "v": "Approved",
+    "all": 23,
+    "lits": [
+     "Approval"
+    ],
+    "taint": [
+     "Approved"
+    ],
+    "conds": [
+     [
+      "Check_Approval",
+      "HR_Business_Request_Confirmation",
+      "[Approved]=\"Approval\"",
+      true,
+      []
+     ]
+    ],
+    "readers": [],
+    "passed": [
+     [
+      "Confirm_Vacation_Request",
+      "Approved"
+     ]
+    ],
+    "run": [
+     {
+      "val": "Approval",
+      "partial": false,
+      "found": [
+       [
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>Approve_Request_IN_24_HRS",
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; timeout on “Confirm_Vacation_Request”"
+       ],
+       [
+        "“Confrim_In_1_Hour” after “HR_Business_Request_Confirmation”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>HR_Business_Request_Confirmation>Confrim_In_1_Hour",
+        "“Confrim_In_1_Hour” after “HR_Business_Request_Confirmation”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; timeout on “HR_Business_Request_Confirmation”"
+       ],
+       [
+        "“Send_Not_Confirmed_Message” after “HR_Business_Request_Confirmation”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>HR_Business_Request_Confirmation>Send_Not_Confirmed_Message",
+        "“Send_Not_Confirmed_Message” after “HR_Business_Request_Confirmation”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; Received = any other value"
+       ],
+       [
+        "“Send_Success_Message” after “Update_Vacation_Balance”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>HR_Business_Request_Confirmation>Update_Vacation_Balance>Send_Success_Message",
+        "“Send_Success_Message” after “Update_Vacation_Balance”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; Received = HR_Confirmed"
+       ]
+      ]
+     },
+     {
+      "val": "__other__",
+      "partial": false,
+      "found": [
+       [
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>Approve_Request_IN_24_HRS",
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; timeout on “Confirm_Vacation_Request”"
+       ],
+       [
+        "“Send_Rejection_Message” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>Send_Rejection_Message",
+        "“Send_Rejection_Message” after “Confirm_Vacation_Request”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value"
+       ]
+      ]
+     }
+    ]
+   },
+   {
+    "v": "Received",
+    "all": 23,
+    "lits": [
+     "HR_Confirmed"
+    ],
+    "taint": [
+     "Received"
+    ],
+    "conds": [
+     [
+      "Check_Confirmation",
+      "Update_Vacation_Balance",
+      "[Received]=\"HR_Confirmed\"",
+      true,
+      []
+     ]
+    ],
+    "readers": [],
+    "passed": [
+     [
+      "HR_Business_Request_Confirmation",
+      "Received"
+     ]
+    ],
+    "run": [
+     {
+      "val": "HR_Confirmed",
+      "partial": false,
+      "found": [
+       [
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>Approve_Request_IN_24_HRS",
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; timeout on “Confirm_Vacation_Request”"
+       ],
+       [
+        "“Confrim_In_1_Hour” after “HR_Business_Request_Confirmation”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>HR_Business_Request_Confirmation>Confrim_In_1_Hour",
+        "“Confrim_In_1_Hour” after “HR_Business_Request_Confirmation”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; Approved = Approval ; timeout on “HR_Business_Request_Confirmation”"
+       ],
+       [
+        "“Send_Rejection_Message” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>Send_Rejection_Message",
+        "“Send_Rejection_Message” after “Confirm_Vacation_Request”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; Approved = any other value"
+       ],
+       [
+        "“Send_Success_Message” after “Update_Vacation_Balance”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>HR_Business_Request_Confirmation>Update_Vacation_Balance>Send_Success_Message",
+        "“Send_Success_Message” after “Update_Vacation_Balance”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; Approved = Approval"
+       ]
+      ]
+     },
+     {
+      "val": "__other__",
+      "partial": false,
+      "found": [
+       [
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>Approve_Request_IN_24_HRS",
+        "“Approve_Request_IN_24_HRS” after “Confirm_Vacation_Request”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; timeout on “Confirm_Vacation_Request”"
+       ],
+       [
+        "“Confrim_In_1_Hour” after “HR_Business_Request_Confirmation”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>HR_Business_Request_Confirmation>Confrim_In_1_Hour",
+        "“Confrim_In_1_Hour” after “HR_Business_Request_Confirmation”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; Approved = Approval ; timeout on “HR_Business_Request_Confirmation”"
+       ],
+       [
+        "“Send_Not_Confirmed_Message” after “HR_Business_Request_Confirmation”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>HR_Business_Request_Confirmation>Send_Not_Confirmed_Message",
+        "“Send_Not_Confirmed_Message” after “HR_Business_Request_Confirmation”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; Approved = Approval"
+       ],
+       [
+        "“Send_Rejection_Message” after “Confirm_Vacation_Request”|Get_Employee_Details>Submit_Vacation_Request_Revamp>Set_Failure_Window_Values>Confirm_Vacation_Request>Send_Rejection_Message",
+        "“Send_Rejection_Message” after “Confirm_Vacation_Request”",
+        "Cause = any other value ; from = any other value ; to = any other value ; Leave Type = any other value ; Sickness = any other value ; Approved = any other value"
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "file": "p4233-v16.xml",
+  "vars": [
+   {
+    "v": "call_result",
+    "all": 6,
+    "lits": [
+     "CANCELLED",
+     "REACHABLE"
+    ],
+    "taint": [
+     "call_result"
+    ],
+    "conds": [
+     [
+      "cancelled_or_not",
+      "cancel_ticket_procedure",
+      "[call_result]=\"CANCELLED\"",
+      true,
+      []
+     ],
+     [
+      "reachable_or_not",
+      "set_ticket_date",
+      "[call_result]=\"REACHABLE\"",
+      true,
+      []
+     ]
+    ],
+    "readers": [],
+    "passed": [
+     [
+      "perform_call",
+      "call_result"
+     ]
+    ],
+    "run": [
+     {
+      "val": "CANCELLED",
+      "partial": false,
+      "found": [
+       [
+        "“cancel_ticket_procedure” after “increment_calls_for_ticket”|Get_ticket_id>get_ticket>perform_call>increment_calls_for_ticket>cancel_ticket_procedure",
+        "“cancel_ticket_procedure” after “increment_calls_for_ticket”",
+        ""
+       ]
+      ]
+     },
+     {
+      "val": "REACHABLE",
+      "partial": false,
+      "found": [
+       [
+        "“schedule_ticket_procedure” after “choose_slot”|Get_ticket_id>get_ticket>perform_call>increment_calls_for_ticket>set_ticket_date>get_available_dates_procedure>choose_date>get_availables_slots_procedure>choose_slot>schedule_ticket_procedure",
+        "“schedule_ticket_procedure” after “choose_slot”",
+        ""
+       ]
+      ]
+     },
+     {
+      "val": "__other__",
+      "partial": false,
+      "found": [
+       [
+        "“check_call_limit_procedure” after “increment_calls_for_ticket”|Get_ticket_id>get_ticket>perform_call>increment_calls_for_ticket>check_call_limit_procedure",
+        "“check_call_limit_procedure” after “increment_calls_for_ticket”",
+        ""
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ }
+]

@@ -110,7 +110,7 @@ export interface InstanceDiagram {
 }
 
 export type IssueType =
-  | 'FAILED_ACTIVITY' | 'STUCK_ACTIVITY' | 'OVERDUE_WORK_ITEM'
+  | 'FAILED_ACTIVITY' | 'TIMED_OUT_ACTIVITY' | 'STUCK_ACTIVITY' | 'OVERDUE_WORK_ITEM'
   | 'SUSPENDED_INSTANCE' | 'ORPHAN_INSTANCE' | 'STUCK_REQUEST';
 
 export interface Issue {
