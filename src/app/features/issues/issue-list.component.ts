@@ -43,6 +43,10 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
       <app-table-tools [columns]="columns" [visible]="visible()" (visibleChange)="visible.set($event)"
         (searchChange)="dt.filterGlobal($event, 'contains')" (exportCsv)="export(dt)" (clear)="clearAll(dt)" />
 
+      @if (type() === 'FAILED_ACTIVITY' && !canBulkRetry()) {
+        <p-message severity="info" styleClass="mb-3"
+          text="Bulk retry of failed steps needs the retry permission (an operations role). Ask an administrator to grant it." />
+      }
       @if (canBulkRetry()) {
         <div class="flex flex-wrap items-center gap-2 mb-3">
           <p-button type="button" icon="pi pi-replay" [label]="'Retry latest request of selected (' + selected.length + ')'"

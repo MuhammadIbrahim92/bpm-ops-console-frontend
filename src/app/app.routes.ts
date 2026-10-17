@@ -5,6 +5,7 @@ import { InstanceDetailComponent } from './features/instances/instance-detail.co
 import { IssueListComponent } from './features/issues/issue-list.component';
 import { ProcessHealthComponent } from './features/processes/process-health.component';
 import { RequestListComponent } from './features/requests/request-list.component';
+import { BulkRetryPageComponent } from './features/bulk/bulk-retry-page.component';
 import { AppLayout } from './layout/component/app.layout';
 import { requireFunction } from './core/auth.guard';
 
@@ -14,6 +15,7 @@ const pages: Routes = [
   { path: 'instances/:id', component: InstanceDetailComponent, title: 'Instance', canActivate: [requireFunction('VIEW_INSTANCES')] },
   { path: 'issues', component: IssueListComponent, title: 'Issues', canActivate: [requireFunction('VIEW_ISSUES')] },
   { path: 'processes', component: ProcessHealthComponent, title: 'Process health', canActivate: [requireFunction('VIEW_ISSUES')] },
+  { path: 'bulk-retry', component: BulkRetryPageComponent, title: 'Bulk retry', canActivate: [requireFunction('RETRY_REQUEST')] },
   { path: 'requests', component: RequestListComponent, title: 'Request queue', canActivate: [requireFunction('VIEW_REQUESTS')] },
 ];
 

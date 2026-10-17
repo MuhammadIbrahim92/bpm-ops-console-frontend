@@ -14,7 +14,7 @@ Angular 21 UI for the operations team, built on the [Sakai-NG](https://github.co
 | Issues | those with `VIEW_ISSUES` | Failed steps, stuck automatic steps, overdue tasks, suspended instances, instances going nowhere, and (operations) engine requests in trouble |
 | Process health | those with `VIEW_ISSUES` | Per-step run counts, failures and average / slowest time for a process over 7, 30 or 90 days |
 | Request queue | operations | The engine's request queue with filters, every column, and a two-step **Retry** |
-| Bulk retry | operations (on Issues, *Failed steps* tab) | Tick failed steps, or import an Excel/CSV sheet of `ACTIVITY_INSTANCE_ID` and/or `INSTANCE_ID`; review what would happen for each instance (nothing changes yet), confirm once, and the newest request of each instance is re-queued |
+| Bulk retry | operations (menu *Bulk retry*, or the Issues page, *Failed steps* tab) | Import an Excel/CSV sheet, paste ids, or tick failed steps of `ACTIVITY_INSTANCE_ID` and/or `INSTANCE_ID`; review what would happen for each instance (nothing changes yet), confirm once, and the newest request of each instance is re-queued |
 
 What a person sees is decided by the backend (roles and permissions come from the database role tables); the UI only
 hides what the backend would refuse anyway. The sidebar menu is built from the functions the backend granted.

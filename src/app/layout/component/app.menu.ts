@@ -32,6 +32,9 @@ export class AppMenu {
         if (this.auth.can('VIEW_REQUESTS')) {
             work.push({ label: 'Request queue', icon: 'pi pi-fw pi-list', routerLink: ['/requests'] });
         }
+        if (this.auth.can('RETRY_REQUEST')) {
+            work.push({ label: 'Bulk retry', icon: 'pi pi-fw pi-replay', routerLink: ['/bulk-retry'] });
+        }
         const menu: MenuItem[] = [{ label: 'Home', items: home }];
         if (work.length > 0) {
             menu.push({ label: 'Operations', items: work });
