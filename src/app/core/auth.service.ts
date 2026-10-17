@@ -3,12 +3,14 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService } from './api.service';
 import { ConsoleFunction, Me } from './models';
 import { describeError } from './errors';
+import { borrowSession, shareSession } from './session-share';
 
 const TOKEN_KEY = 'bpm-console-token';
 
 /**
  * Who the signed-in person is and what they may do. Sign-in posts the user name and password to the backend, which
- * answers with a JWT. The token lives in sessionStorage (gone when the tab closes) and is sent as a Bearer header.
+ * answers with a JWT. The token lives in sessionStorage (gone when the tab closes) and is sent as a Bearer header. A tab opened from
+ * another tab borrows that tab's token (see session-share).
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -18,7 +20,10 @@ export class AuthService {
 
   private token: string | null = readToken();
 
-  constructor(private readonly api: ApiService) {}
+  constructor(private readonly api: ApiService) {
+    // a link opened in a new tab asks this tab for the sign-in instead of showing the form again
+    shareSession(() => this.token);
+  }
 
   getToken(): string | null {
     return this.token;
@@ -27,7 +32,12 @@ export class AuthService {
   /** Called once at start-up. Never throws: without a token (or with a refused one) the sign-in form is shown. */
   async load(): Promise<void> {
     if (!this.token) {
-      return;
+      const shared = await borrowSession();
+      if (!shared) {
+        return;
+      }
+      this.token = shared;
+      storeToken(shared);
     }
     try {
       this.me.set(await firstValueFrom(this.api.me()));
