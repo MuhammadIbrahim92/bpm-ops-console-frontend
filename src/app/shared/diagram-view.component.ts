@@ -533,6 +533,10 @@ export class DiagramViewComponent implements OnChanges {
         this.focusNodes!.add(e.target);
         this.focusEdges!.add(e.id);
       });
+    } else if (this.focusState) {
+      // a state picked in the legend wins over the selected step: it stays on while steps are clicked
+      this.focusNodes = new Set(this.nodes.filter(d => d.cls === this.focusState).map(d => d.n.activityId));
+      this.focusEdges = new Set(this.edges.filter(e => this.focusNodes!.has(e.source) && this.focusNodes!.has(e.target)).map(e => e.id));
     } else if (this.selectedId && this.byId.has(this.selectedId)) {
       const id = this.selectedId;
       this.focusNodes = new Set([id]);
@@ -547,9 +551,6 @@ export class DiagramViewComponent implements OnChanges {
           }
         }
       });
-    } else if (this.focusState) {
-      this.focusNodes = new Set(this.nodes.filter(d => d.cls === this.focusState).map(d => d.n.activityId));
-      this.focusEdges = new Set();
     }
   }
 
