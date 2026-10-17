@@ -223,6 +223,21 @@ export interface WorkItemHtml {
 }
 
 /** One page of attribute rows, grouped by data object. total counts attribute rows. */
+/** One row of a tabular data object: the engine's row id and the value of each column in it. */
+export interface TabularRow {
+  rowId: number;
+  values: Record<string, string | null>;
+}
+
+/** A data object of type Table as columns and rows. */
+export interface TabularTable {
+  doId: number;
+  doName: string;
+  columns: string[];
+  rows: TabularRow[];
+  truncated: boolean;
+}
+
 export interface AttributePage {
   sections: AttributeSection[];
   total: number;

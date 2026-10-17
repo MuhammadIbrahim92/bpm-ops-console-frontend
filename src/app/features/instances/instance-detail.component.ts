@@ -9,13 +9,14 @@ import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
-import { ActivityState, AttributePage, DiagramNode, InstanceDiagram, InstanceSummary, RequestRow, StartForm, StepRow, TimerRequestRow, WorkItemHtml } from '../../core/models';
+import { ActivityState, AttributePage, TabularTable, DiagramNode, InstanceDiagram, InstanceSummary, RequestRow, StartForm, StepRow, TimerRequestRow, WorkItemHtml } from '../../core/models';
 import { kindLabel } from '../../core/diagram-geometry';
 import { PagerComponent } from '../../shared/pager.component';
 import { downloadCsv } from '../../shared/csv';
 import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
 import { RequestTablesComponent } from '../../shared/request-tables.component';
 import { activityLook, instanceLook, requestLook } from '../../core/status';
+import { TabularTablesComponent } from '../../shared/tabular-tables.component';
 import { DiagramViewComponent } from '../../shared/diagram-view.component';
 import { AgePipe, DateTimePipe, DurationPipe } from '../../shared/pipes';
 import { AttributeSectionsComponent } from '../../shared/attribute-sections.component';
@@ -27,7 +28,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
 @Component({
   selector: 'app-instance-detail',
   standalone: true,
-  imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
+  imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, TabularTablesComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
   template: `
     <div class="mb-4">
       <p-button label="All instances" icon="pi pi-arrow-left" [text]="true" routerLink="/instances" />
@@ -182,6 +183,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
                   @if (stepAttributes(); as pg) {
                     <div class="font-semibold mb-2">Attributes of this step</div>
                     <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
+                    <app-tabular-tables [tables]="stepTables()" exportName="step-table" />
                     @if (pg.total > pg.size || pg.page > 0) {
                       <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
                         (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
@@ -207,6 +209,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
           <p class="text-muted-color mb-4">Current attributes of this process instance, grouped by data object.</p>
           @if (processAttributes(); as pg) {
             <app-attribute-sections [sections]="pg.sections" emptyText="This instance has no attributes." />
+            <app-tabular-tables [tables]="processTables()" exportName="instance-table" />
             <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
               (pageChange)="loadAttributes($event, pg.size)" (sizeChange)="loadAttributes(0, $event)" />
           } @else {
@@ -273,6 +276,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
             @if (stepAttributes(); as pg) {
               <div class="font-semibold mb-2 mt-3">Attributes</div>
               <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
+              <app-tabular-tables [tables]="stepTables()" exportName="step-table" />
               @if (pg.total > pg.size || pg.page > 0) {
                 <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
                   (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
@@ -335,6 +339,8 @@ export class InstanceDetailComponent implements OnInit {
   readonly tab = signal<Tab>('steps');
   readonly selectedId = signal<string | undefined>(undefined);
   readonly processAttributes = signal<AttributePage | null>(null);
+  readonly processTables = signal<TabularTable[]>([]);
+  readonly stepTables = signal<TabularTable[]>([]);
   readonly openStep = signal<number | null>(null);
   readonly stepAttributes = signal<AttributePage | null>(null);
   readonly stepForms = signal<WorkItemHtml[]>([]);
@@ -490,6 +496,12 @@ export class InstanceDetailComponent implements OnInit {
       next: p => this.processAttributes.set(p),
       error: e => this.error.set(describeError(e))
     });
+    if (page === 0 && this.processTables().length === 0) {
+      this.api.processTables(this.id).subscribe({
+        next: t => this.processTables.set(t),
+        error: e => this.error.set(describeError(e))
+      });
+    }
   }
 
   loadStepAttributes(page: number, size: number): void {
@@ -501,10 +513,17 @@ export class InstanceDetailComponent implements OnInit {
       next: p => { if (this.openStep() === open) { this.stepAttributes.set(p); } },
       error: e => this.stepError.set(describeError(e))
     });
+    if (page === 0) {
+      this.api.stepTables(this.id, open).subscribe({
+        next: t => { if (this.openStep() === open) { this.stepTables.set(t); } },
+        error: e => this.stepError.set(describeError(e))
+      });
+    }
   }
 
   toggleDetails(activityInstanceId: number): void {
     this.stepAttributes.set(null);
+    this.stepTables.set([]);
     this.stepForms.set([]);
     this.stepError.set(null);
     if (this.openStep() === activityInstanceId) {
@@ -538,6 +557,7 @@ export class InstanceDetailComponent implements OnInit {
     this.popupLoading.set(true);
     this.openStep.set(null);
     this.stepAttributes.set(null);
+    this.stepTables.set([]);
     this.stepForms.set([]);
     this.stepError.set(null);
     if (isStart) {
@@ -573,12 +593,14 @@ export class InstanceDetailComponent implements OnInit {
     this.popup.set(null);
     this.openStep.set(null);
     this.stepAttributes.set(null);
+    this.stepTables.set([]);
     this.stepForms.set([]);
     this.stepError.set(null);
   }
 
   private showExecution(activityInstanceId: number): void {
     this.stepAttributes.set(null);
+    this.stepTables.set([]);
     this.stepForms.set([]);
     this.stepError.set(null);
     this.openStep.set(activityInstanceId);
@@ -639,8 +661,10 @@ export class InstanceDetailComponent implements OnInit {
     this.timers.set([]);
     this.queuesLoaded = false;
     this.processAttributes.set(null);
+    this.processTables.set([]);
     this.openStep.set(null);
     this.stepAttributes.set(null);
+    this.stepTables.set([]);
     this.stepForms.set([]);
     this.stepError.set(null);
     this.startOpen.set(false);

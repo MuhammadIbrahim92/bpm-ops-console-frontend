@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, AttributePage, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, AttributePage, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -69,6 +69,14 @@ export class ApiService {
 
   processAttributes(id: number, page = 0, size = 50): Observable<AttributePage> {
     return this.http.get<AttributePage>(`${this.base}/instances/${id}/attributes`, { params: toParams({ page, size }) });
+  }
+
+  processTables(id: number): Observable<TabularTable[]> {
+    return this.http.get<TabularTable[]>(`${this.base}/instances/${id}/tables`);
+  }
+
+  stepTables(id: number, activityInstanceId: number): Observable<TabularTable[]> {
+    return this.http.get<TabularTable[]>(`${this.base}/instances/${id}/activities/${activityInstanceId}/tables`);
   }
 
   stepAttributes(id: number, activityInstanceId: number, page = 0, size = 50): Observable<AttributePage> {
