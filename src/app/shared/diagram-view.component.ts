@@ -2,7 +2,7 @@ import { ButtonModule } from 'primeng/button';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
-import { ActivityState, DiagramGraph, DiagramNode, NodeKind, Overlay } from '../core/models';
+import { ActivityState, DiagramGraph, DiagramNode, NodeKind, Overlay, SubProcessLink } from '../core/models';
 import {
   Shape, ViewBox, diamondPoints, edgePoints, kindLabel, shapeOf, toPath, viewBoxOf, wrapLabel
 } from '../core/diagram-geometry';
@@ -141,7 +141,7 @@ interface DrawEdge {
     }
 
     <div class="dv-stage">
-      <svg #svg class="dv-svg" [attr.viewBox]="vbText" role="group" aria-label="Process diagram with instance state"
+      <svg #svg class="dv-svg" [class.compact]="compact" [attr.viewBox]="vbText" role="group" aria-label="Process diagram with instance state"
            (wheel)="onWheel($event)" (pointerdown)="onDown($event)" (pointermove)="onMove($event)"
            (pointerup)="onUp($event)" (pointercancel)="onUp($event)">
         <defs>
@@ -198,6 +198,13 @@ interface DrawEdge {
               <g class="dv-badge" [attr.transform]="'translate(' + (d.n.x + d.n.width - 2) + ' ' + (d.n.y + 2) + ')'">
                 <circle r="9" class="dv-disc" />
                 <g transform="translate(-6.2 -6.2) scale(0.52)" [attr.fill]="icons(d.cls).solid ? '#fff' : 'none'" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="icons(d.cls).d" /></g>
+              </g>
+            }
+            @if (childBadge(d.n.activityId); as cb) {
+              <g class="dv-child" [style.--st]="cb.colour" [attr.transform]="'translate(' + (d.n.x + d.n.width - 2) + ' ' + (d.n.y + d.n.height - 2) + ')'">
+                <title>{{ cb.text }}</title>
+                <circle r="9" class="dv-disc" />
+                <g transform="translate(-6.2 -6.2) scale(0.52)" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v5M5 15v-3h14v3M12 8v4M3 15h4v5H3zM10 15h4v5h-4zM17 15h4v5h-4z" /></g>
               </g>
             }
             @if (d.overdue) {
@@ -257,6 +264,9 @@ interface DrawEdge {
       cursor: grab;
       user-select: none;
     }
+    .dv-svg.compact { height: 44vh; min-height: 280px; }
+    .dv-child { pointer-events: none; }
+    .dv-child .dv-disc { stroke: var(--surface); stroke-width: 1.5; }
     .dv-svg:active { cursor: grabbing; }
     .dv-mini { position: absolute; right: 12px; bottom: 12px; width: 170px; height: 110px; border: 1px solid var(--border); border-radius: 8px; background: color-mix(in srgb, var(--surface) 90%, transparent); box-shadow: 0 2px 8px rgba(0,0,0,.15); cursor: pointer; }
     .dv-mini .view { fill: color-mix(in srgb, var(--accent) 15%, transparent); stroke: var(--accent); stroke-width: 3; vector-effect: non-scaling-stroke; }
@@ -309,6 +319,10 @@ export class DiagramViewComponent implements OnChanges {
   @Input({ required: true }) graph!: DiagramGraph;
   @Input() overlay?: Overlay;
   @Input() selectedId?: string;
+  /** A smaller drawing, for showing inside another window. */
+  @Input() compact = false;
+  /** The sub-process instances of this instance's sub-process steps: their state is shown on the step. */
+  @Input() children: SubProcessLink[] = [];
   /** A click on a step: the parent opens its details. */
   @Output() selected = new EventEmitter<string>();
   /** Moving the highlight (find, issues, following the run) without opening anything. An empty id clears it. */
@@ -363,6 +377,28 @@ export class DiagramViewComponent implements OnChanges {
       this.replay = null;
     }
     this.refresh();
+  }
+
+  /** The state of the sub-process a step started (the latest run that has one), drawn as a small badge on the step. */
+  childBadge(activityId: string): { colour: string; text: string } | null {
+    let latest: SubProcessLink | null = null;
+    for (const l of this.children) {
+      if (l.activityId === activityId && l.child && (!latest || (l.start ?? '') >= (latest.start ?? ''))) {
+        latest = l;
+      }
+    }
+    const c = latest?.child;
+    if (!c) {
+      return null;
+    }
+    const status = (c.status ?? '').toUpperCase();
+    let cls = status === 'COMPLETED' ? 'done' : status === 'SUSPENDED' ? 'suspended' : status === 'TERMINATED' ? 'idle' : 'running';
+    let word = status === 'COMPLETED' ? 'completed' : status === 'SUSPENDED' ? 'suspended' : status === 'TERMINATED' ? 'terminated' : 'running';
+    if (c.failedActivities > 0) {
+      cls = 'failed';
+      word += ', ' + c.failedActivities + ' failed step' + (c.failedActivities === 1 ? '' : 's');
+    }
+    return { colour: 'var(--c-' + cls + ')', text: 'Sub-process #' + c.id + ': ' + word };
   }
 
   icons(cls: string): Icon {

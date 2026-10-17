@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, AttributePage, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, AttributePage, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -72,6 +72,15 @@ export class ApiService {
   }
 
   /** The instance's tabular data objects, each with its first page of rows. */
+  subProcesses(id: number): Observable<SubProcessLink[]> {
+    return this.http.get<SubProcessLink[]>(`${this.base}/instances/${id}/sub-processes`);
+  }
+
+  /** The instance that started this one; a 404 means it is not a sub-process instance. */
+  parentOf(id: number): Observable<ParentRef> {
+    return this.http.get<ParentRef>(`${this.base}/instances/${id}/parent`);
+  }
+
   processTables(id: number, size = 25): Observable<TabularTable[]> {
     return this.http.get<TabularTable[]>(`${this.base}/instances/${id}/tables`, { params: toParams({ size }) });
   }

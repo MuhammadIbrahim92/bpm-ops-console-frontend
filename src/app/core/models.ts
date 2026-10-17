@@ -48,6 +48,9 @@ export type NodeKind =
 export interface DiagramNode {
   id: string;
   activityId: string;
+  /** For a sub-process step: the process and version the drawing names. */
+  subProcessId?: string | null;
+  subProcessVersion?: string | null;
   name?: string;
   kind: NodeKind;
   x: number;
@@ -239,6 +242,29 @@ export interface TabularTable {
   totalRows: number;
   page: number;
   size: number;
+}
+
+/** One run of a sub-process step and the instance it started (found exactly), if any. */
+export interface SubProcessLink {
+  activityId: string;
+  activityName: string;
+  activityInstanceId: number;
+  status: string;
+  start?: string;
+  configuredProcessId?: string | null;
+  configuredVersion?: string | null;
+  matchedBy?: string | null;
+  child: InstanceSummary | null;
+  hidden: boolean;
+}
+
+/** What a sub-process instance records about the instance that started it. */
+export interface ParentRef {
+  instanceId: number;
+  activityId?: string | null;
+  activityName?: string | null;
+  available: boolean;
+  parentName?: string | null;
 }
 
 export interface AttributePage {

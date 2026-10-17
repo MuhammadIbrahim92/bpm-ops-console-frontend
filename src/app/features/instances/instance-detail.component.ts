@@ -9,7 +9,7 @@ import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
-import { ActivityState, AttributePage, TabularTable, DiagramNode, InstanceDiagram, InstanceSummary, RequestRow, StartForm, StepRow, TimerRequestRow, WorkItemHtml } from '../../core/models';
+import { ActivityState, AttributePage, ParentRef, SubProcessLink, TabularTable, DiagramNode, InstanceDiagram, InstanceSummary, RequestRow, StartForm, StepRow, TimerRequestRow, WorkItemHtml } from '../../core/models';
 import { kindLabel } from '../../core/diagram-geometry';
 import { PagerComponent } from '../../shared/pager.component';
 import { downloadCsv } from '../../shared/csv';
@@ -17,6 +17,7 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
 import { RequestTablesComponent } from '../../shared/request-tables.component';
 import { activityLook, instanceLook, requestLook } from '../../core/status';
 import { EMPTY } from 'rxjs';
+import { SubProcessPanelComponent } from '../../shared/sub-process-panel.component';
 import { TabularTablesComponent } from '../../shared/tabular-tables.component';
 import { DiagramViewComponent } from '../../shared/diagram-view.component';
 import { AgePipe, DateTimePipe, DurationPipe } from '../../shared/pipes';
@@ -29,7 +30,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
 @Component({
   selector: 'app-instance-detail',
   standalone: true,
-  imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, TabularTablesComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
+  imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, TabularTablesComponent, SubProcessPanelComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
   template: `
     <div class="mb-4">
       <p-button label="All instances" icon="pi pi-arrow-left" [text]="true" routerLink="/instances" />
@@ -54,6 +55,18 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
         </div>
       </div>
 
+      @if (parent(); as pr) {
+        <div class="card flex flex-wrap items-center gap-2">
+          <i class="pi pi-sitemap"></i>
+          @if (pr.available) {
+            <span>This is a sub-process: it was started by
+              @if (pr.activityName) { the step <b>{{ pr.activityName }}</b> of } instance
+              <a [routerLink]="['/instances', pr.instanceId]">#{{ pr.instanceId }}</a>@if (pr.parentName) { ({{ pr.parentName }}) }.</span>
+          } @else {
+            <span>This is a sub-process of instance #{{ pr.instanceId }}, which no longer exists or is not visible to you.</span>
+          }
+        </div>
+      }
       <div class="card">
         <p-tabs [value]="tab()" (valueChange)="show($any($event))">
           <p-tablist>
@@ -76,7 +89,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
             }
             @if (d.graph; as g) {
               <div class="split">
-                <app-diagram-view [graph]="g" [overlay]="d.overlay" [selectedId]="selectedId()" (selected)="onNode($event)" (focused)="selectedId.set($event || undefined)" />
+                <app-diagram-view [graph]="g" [overlay]="d.overlay" [children]="subLinks()" [selectedId]="selectedId()" (selected)="onNode($event)" (focused)="selectedId.set($event || undefined)" />
                 <aside class="side" aria-live="polite">
                   @if (selectedNode(); as n) {
                     <div class="font-semibold text-lg">{{ n.name || n.activityId }}</div>
@@ -237,6 +250,9 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
           }
         </ng-template>
         @if (popup(); as pu) {
+          @if (popupLinks().length > 0) {
+            <app-sub-process-panel [links]="popupLinks()" />
+          }
           @if (pu.isStart) {
             @if (startFormError()) {
               <p-message severity="info" [text]="startFormError()!" styleClass="mb-3" />
@@ -341,6 +357,13 @@ export class InstanceDetailComponent implements OnInit {
   readonly selectedId = signal<string | undefined>(undefined);
   readonly processAttributes = signal<AttributePage | null>(null);
   readonly processTables = signal<TabularTable[]>([]);
+  readonly subLinks = signal<SubProcessLink[]>([]);
+  readonly parent = signal<ParentRef | null>(null);
+  /** The runs of the open step's sub-process, when it is a sub-process step. */
+  readonly popupLinks = computed(() => {
+    const pu = this.popup();
+    return pu ? this.subLinks().filter(l => l.activityId === pu.activityId) : [];
+  });
   readonly stepTables = signal<TabularTable[]>([]);
   readonly openStep = signal<number | null>(null);
   readonly stepAttributes = signal<AttributePage | null>(null);
@@ -679,11 +702,20 @@ export class InstanceDetailComponent implements OnInit {
     this.startForm.set(null);
     this.startFormError.set(null);
     this.selectedId.set(undefined);
+    this.subLinks.set([]);
+    this.parent.set(null);
+    this.api.parentOf(this.id).subscribe({ next: p => this.parent.set(p), error: () => this.parent.set(null) });
     this.loadSteps(0, this.stepSize());
     if (this.auth.can('VIEW_DIAGRAM')) {
       this.tab.set('diagram');
       this.api.diagram(this.id).subscribe({
-        next: d => { this.diagram.set(d); this.instance.set(d.instance); },
+        next: d => {
+          this.diagram.set(d);
+          this.instance.set(d.instance);
+          if (d.graph?.nodes.some(n => n.kind === 'SUB_PROCESS' || n.subProcessId)) {
+            this.api.subProcesses(this.id).subscribe({ next: l => this.subLinks.set(l), error: () => this.subLinks.set([]) });
+          }
+        },
         error: e => this.error.set(describeError(e))
       });
     } else {
