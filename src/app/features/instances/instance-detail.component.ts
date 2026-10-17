@@ -74,7 +74,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
             }
             @if (d.graph; as g) {
               <div class="split">
-                <app-diagram-view [graph]="g" [overlay]="d.overlay" [selectedId]="selectedId()" (selected)="onNode($event)" />
+                <app-diagram-view [graph]="g" [overlay]="d.overlay" [selectedId]="selectedId()" (selected)="onNode($event)" (focused)="selectedId.set($event || undefined)" />
                 <aside class="side" aria-live="polite">
                   @if (selectedNode(); as n) {
                     <div class="font-semibold text-lg">{{ n.name || n.activityId }}</div>
