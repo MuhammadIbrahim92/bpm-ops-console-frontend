@@ -1,4 +1,4 @@
-import { Component, Input, computed, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -150,6 +150,7 @@ interface Result {
           <b>{{ $index + 1 }}. Ends as {{ f.out }}</b>
           @if (f.n > 1) { <small class="text-muted-color"> · {{ f.n }} variants with the same steps</small> }
           @if (f.assume.length) { <div class="small"><b>Assumes:</b> {{ f.assume.join('; ') }}</div> }
+          <p-button type="button" label="Show on diagram" icon="pi pi-share-alt" size="small" severity="secondary" [outlined]="true" class="block mt-2" (onClick)="show.emit(f.p)" />
           <details>
             <summary>Step by step</summary>
             <ol>@for (x of steps(f); track $index) { <li [class]="'k-' + x.k">{{ x.x }}</li> }</ol>
@@ -192,6 +193,7 @@ export class XpdlImpactComponent {
   readonly busy = signal(false);
   readonly progress = signal('');
   deviations = 1;
+  @Output() readonly show = new EventEmitter<string[]>();
   selected = 0;
 
   @Input({ required: true }) set model(value: ProcessData) {

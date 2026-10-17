@@ -1,4 +1,4 @@
-import { Component, Input, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -39,6 +39,7 @@ import { Activity, KIND_LABEL, ProcessData, SimState, Simulator, createSimulator
       <div class="flex flex-wrap gap-2 mb-3">
         <p-button type="button" label="Step" size="small" severity="secondary" [outlined]="true" [disabled]="s.done || !!s.wait" (onClick)="step()" />
         <p-button type="button" label="Run" icon="pi pi-play" size="small" [disabled]="s.done || !!s.wait" (onClick)="runOn()" />
+        <p-button type="button" label="Show on diagram" icon="pi pi-share-alt" size="small" severity="secondary" [outlined]="true" (onClick)="show.emit(s.path)" />
         <p-button type="button" label="Restart" icon="pi pi-refresh" size="small" severity="secondary" [outlined]="true" (onClick)="restart()" />
         <p-button type="button" label="Exit" size="small" severity="secondary" [text]="true" (onClick)="restart()" />
       </div>
@@ -110,6 +111,7 @@ export class XpdlSimulateComponent {
   inputs: ReturnType<Simulator['inputs']> = [];
   start: Record<string, string> = {};
   extra = '';
+  @Output() readonly show = new EventEmitter<string[]>();
   answer: Record<string, string> = {};
   readonly state = signal<SimState | null>(null);
 

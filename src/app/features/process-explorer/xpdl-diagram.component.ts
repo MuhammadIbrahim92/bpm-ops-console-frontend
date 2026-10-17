@@ -334,6 +334,16 @@ export class XpdlDiagramComponent {
     setTimeout(() => this.fit(), 0);
   }
 
+  /** A route to show on arrival (from a scenario, a simulation run or an impact result): numbered, ready to continue tracing. */
+  @Input() set route(path: string[] | null) {
+    if (path && path.length) {
+      setTimeout(() => {
+        this.mode.set({ kind: 'trace', path: [...path] });
+        this.reveal(path[path.length - 1]);
+      }, 0);
+    }
+  }
+
   readonly mode = signal<Mode>({ kind: 'none' });
   readonly hidden = signal<Set<Kind>>(new Set());
   readonly zoom = signal(1);

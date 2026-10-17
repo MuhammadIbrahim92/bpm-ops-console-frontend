@@ -76,7 +76,7 @@ import { XpdlScenariosComponent } from './xpdl-scenarios.component';
     }
     @if (data(); as d) {
       <div class="card">
-        <p-tabs value="diagram" [lazy]="true">
+        <p-tabs [value]="tab()" (valueChange)="tab.set($any($event))" [lazy]="true">
           <p-tablist>
             <p-tab value="diagram">Diagram</p-tab>
             <p-tab value="report">Report</p-tab>
@@ -87,12 +87,12 @@ import { XpdlScenariosComponent } from './xpdl-scenarios.component';
             @if (processId && versions().length > 1) { <p-tab value="compare">Compare versions</p-tab> }
           </p-tablist>
           <p-tabpanels>
-            <p-tabpanel value="diagram"><app-xpdl-diagram [data]="d" /></p-tabpanel>
+            <p-tabpanel value="diagram"><app-xpdl-diagram [data]="d" [route]="shownRoute()" /></p-tabpanel>
             <p-tabpanel value="report"><app-xpdl-report [model]="d" /></p-tabpanel>
             <p-tabpanel value="io"><app-xpdl-integrations [model]="d" /></p-tabpanel>
-            <p-tabpanel value="scenarios"><app-xpdl-scenarios [model]="d" /></p-tabpanel>
-            <p-tabpanel value="sim"><app-xpdl-simulate [model]="d" /></p-tabpanel>
-            <p-tabpanel value="param"><app-xpdl-impact [model]="d" /></p-tabpanel>
+            <p-tabpanel value="scenarios"><app-xpdl-scenarios [model]="d" (show)="showOnDiagram($event)" /></p-tabpanel>
+            <p-tabpanel value="sim"><app-xpdl-simulate [model]="d" (show)="showOnDiagram($event)" /></p-tabpanel>
+            <p-tabpanel value="param"><app-xpdl-impact [model]="d" (show)="showOnDiagram($event)" /></p-tabpanel>
             @if (processId && versions().length > 1) {
               <p-tabpanel value="compare">
                 <app-xpdl-compare [source]="source" [processId]="processId" [versions]="versions()" [current]="version" />
@@ -117,6 +117,14 @@ export class ProcessExplorerComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly loading = signal(false);
   readonly loadingList = signal(false);
+  readonly tab = signal<string | number>('diagram');
+  readonly shownRoute = signal<string[] | null>(null);
+
+  /** Switches to the diagram with this route numbered, so the user can carry on tracing from its end. */
+  showOnDiagram(path: string[]): void {
+    this.shownRoute.set([...path]);
+    this.tab.set('diagram');
+  }
 
   source = 'repository';
   processId: number | null = null;

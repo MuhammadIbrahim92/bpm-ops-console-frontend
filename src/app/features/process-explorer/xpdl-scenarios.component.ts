@@ -1,5 +1,6 @@
-import { Component, Input, computed, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { Analysis, ProcessData, Scenario, analyseProcess, scenarioSteps, scenarioTitle } from './xpdl';
@@ -11,7 +12,7 @@ import { Analysis, ProcessData, Scenario, analyseProcess, scenarioSteps, scenari
 @Component({
   selector: 'app-xpdl-scenarios',
   standalone: true,
-  imports: [FormsModule, SelectModule, TagModule],
+  imports: [FormsModule, ButtonModule, SelectModule, TagModule],
   template: `
     @if (busy()) {
       <div class="text-muted-color"><i class="pi pi-spin pi-spinner mr-2"></i>Working out the routes…</div>
@@ -30,6 +31,7 @@ import { Analysis, ProcessData, Scenario, analyseProcess, scenarioSteps, scenari
           @if (open().has($index)) {
             <div class="body">
               @if (s.dev?.length) { <div class="mb-2">What makes it different: {{ s.dev?.join('; ') }}.</div> }
+              <p-button type="button" label="Show on diagram" icon="pi pi-share-alt" size="small" severity="secondary" [outlined]="true" class="block mb-2" (onClick)="show.emit(s.p)" />
               <ol>
                 @for (n of narration(s); track $index) {
                   <li><p-tag [value]="label[n.k]" [severity]="sev[n.k]" /> <span class="ml-1">{{ n.x }}</span></li>
@@ -73,6 +75,7 @@ export class XpdlScenariosComponent {
   readonly busy = signal(false);
   readonly open = signal<Set<number>>(new Set([0]));
   picked: string | null = null;
+  @Output() readonly show = new EventEmitter<string[]>();
 
   @Input({ required: true }) set model(value: ProcessData) {
     this.data.set(value);
