@@ -7,6 +7,7 @@ module.exports = function (config) {
       require('karma-chrome-launcher'),
       require('@angular-devkit/build-angular/plugins/karma')
     ],
+    files: [{ pattern: 'src/app/features/process-explorer/xpdl/testdata/*', included: false, served: true, watched: false }],
     client: { jasmine: { random: false } },
     reporters: ['progress'],
     browsers: ['ChromeHeadlessCI'],

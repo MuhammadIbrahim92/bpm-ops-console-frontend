@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
@@ -8,6 +9,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { SelectModule } from 'primeng/select';
 import { Table, TableModule } from 'primeng/table';
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { describeError } from '../../core/errors';
 import { ActivityStat, Lookups } from '../../core/models';
 import { downloadCsv } from '../../shared/csv';
@@ -17,7 +19,7 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
 @Component({
   selector: 'app-process-health',
   standalone: true,
-  imports: [FormsModule, ButtonModule, CheckboxModule, InputTextModule, MessageModule, ProgressBarModule, SelectModule, TableModule, TableToolsComponent, DurationPipe],
+  imports: [FormsModule, RouterLink, ButtonModule, CheckboxModule, InputTextModule, MessageModule, ProgressBarModule, SelectModule, TableModule, TableToolsComponent, DurationPipe],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1">Process health</div>
@@ -43,6 +45,9 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
         </div>
         <div class="col-span-12 md:col-span-2">
           <p-button type="submit" label="Show" icon="pi pi-chart-bar" [disabled]="processId === null || loading()" />
+          @if (auth.can('VIEW_DEFINITIONS') && processId !== null) {
+            <a class="ml-3 text-primary" routerLink="/definitions" [queryParams]="definitionLink()">View definition</a>
+          }
         </div>
       </form>
     </div>
@@ -140,6 +145,8 @@ export class ProcessHealthComponent implements OnInit {
     ], rows);
   }
 
+  readonly auth = inject(AuthService);
+
   processId: number | null = null;
   version = '';
   days = 30;
@@ -149,6 +156,15 @@ export class ProcessHealthComponent implements OnInit {
 
   ngOnInit(): void {
     this.api.lookups().subscribe({ next: l => this.lookups.set(l), error: e => this.error.set(describeError(e)) });
+  }
+
+  /** Opens the process explorer on this process (and version, when one is typed in). */
+  definitionLink(): Record<string, string | number> {
+    const q: Record<string, string | number> = { source: 'repository', processId: this.processId! };
+    if (this.version.trim()) {
+      q['version'] = this.version.trim();
+    }
+    return q;
   }
 
   width(avg: number | undefined): number {

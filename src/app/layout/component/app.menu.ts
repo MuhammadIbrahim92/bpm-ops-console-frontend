@@ -39,6 +39,12 @@ export class AppMenu {
         if (work.length > 0) {
             menu.push({ label: 'Operations', items: work });
         }
+        if (this.auth.can('VIEW_DEFINITIONS')) {
+            menu.push({
+                label: 'Design',
+                items: [{ label: 'Process explorer', icon: 'pi pi-fw pi-share-alt', routerLink: ['/definitions'] }]
+            });
+        }
         return menu;
     });
 }

@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, AttributePage, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, AttributePage, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -129,6 +129,27 @@ export class ApiService {
     const form = new FormData();
     form.append('file', file, file.name);
     return this.http.post<BulkImport>(`${this.base}/requests/bulk-retry/import`, form);
+  }
+
+  definitionSources(): Observable<DefinitionSource[]> {
+    return this.http.get<DefinitionSource[]>(`${this.base}/definitions/sources`);
+  }
+
+  definitionProcesses(source: string): Observable<DefinitionProcess[]> {
+    return this.http.get<DefinitionProcess[]>(`${this.base}/definitions/processes`, { params: toParams({ source }) });
+  }
+
+  definitionVersions(source: string, processId: number): Observable<DefinitionVersion[]> {
+    return this.http.get<DefinitionVersion[]>(`${this.base}/definitions/versions`,
+      { params: toParams({ source, processId }) });
+  }
+
+  /** The definition (XPDL with the diagram) as text; secrets are already masked by the server. */
+  definitionXpdl(source: string, processId: number, version: string): Observable<string> {
+    return this.http.get(`${this.base}/definitions/xpdl`, {
+      params: toParams({ source, processId, version }),
+      responseType: 'text'
+    });
   }
 
   retry(id: number): Observable<RequestRow> {

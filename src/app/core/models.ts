@@ -1,6 +1,6 @@
 /** Shapes returned by the backend. Optional fields are omitted by the server when null. */
 
-export type ConsoleFunction = 'VIEW_INSTANCES' | 'VIEW_DIAGRAM' | 'VIEW_ISSUES' | 'VIEW_REQUESTS' | 'RETRY_REQUEST';
+export type ConsoleFunction = 'VIEW_INSTANCES' | 'VIEW_DIAGRAM' | 'VIEW_ISSUES' | 'VIEW_REQUESTS' | 'RETRY_REQUEST' | 'VIEW_DEFINITIONS';
 
 export interface Me {
   login: string;
@@ -279,4 +279,27 @@ export interface BulkResult {
 export interface BulkImport {
   targets: BulkTarget[];
   warnings: string[];
+}
+
+/** A process that has stored definitions, from the repository or the configuration schema. */
+export interface DefinitionProcess {
+  id: number;
+  name: string;
+  versions: number;
+  latestVersion: string;
+  activeVersion?: string;
+}
+
+export interface DefinitionVersion {
+  versionNo: string;
+  active: boolean;
+  status?: string;
+  publishDate?: string;
+  description?: string;
+  sizeBytes: number;
+}
+
+export interface DefinitionSource {
+  key: string;
+  label: string;
 }
