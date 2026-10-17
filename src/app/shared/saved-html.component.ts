@@ -3,13 +3,16 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 /**
  * The saved HTML links its stylesheets, scripts, images and fonts under /resources (served by this app). Those, and
- * inline styles and scripts, are allowed. Network calls, forms, frames and every other origin stay blocked.
+ * inline styles and scripts, are allowed. Other network calls, forms, frames and every other origin stay blocked.
  */
 function policy(): string {
   const origin = location.origin;
   const base = new URL('.', document.baseURI).href;
   return `<base href="${base}"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; `
-    + `script-src 'unsafe-inline' ${origin}; style-src 'unsafe-inline' ${origin}; img-src data: ${origin}; font-src data: ${origin}">`;
+    + `script-src 'unsafe-inline' ${origin}; style-src 'unsafe-inline' ${origin}; img-src data: ${origin}; font-src data: ${origin}; `
+    // only the static resources may be fetched (the browser's developer tools ask for the source maps of the libraries);
+    // the API and every other address stay blocked
+    + `connect-src ${origin}/resources/">`;
 }
 
 /**
