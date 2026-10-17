@@ -16,6 +16,7 @@ import { downloadCsv } from '../../shared/csv';
 import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
 import { RequestTablesComponent } from '../../shared/request-tables.component';
 import { activityLook, instanceLook, requestLook } from '../../core/status';
+import { EMPTY } from 'rxjs';
 import { TabularTablesComponent } from '../../shared/tabular-tables.component';
 import { DiagramViewComponent } from '../../shared/diagram-view.component';
 import { AgePipe, DateTimePipe, DurationPipe } from '../../shared/pipes';
@@ -183,7 +184,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
                   @if (stepAttributes(); as pg) {
                     <div class="font-semibold mb-2">Attributes of this step</div>
                     <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
-                    <app-tabular-tables [tables]="stepTables()" exportName="step-table" />
+                    <app-tabular-tables [tables]="stepTables()" [loader]="stepTableLoader" exportName="step-table" />
                     @if (pg.total > pg.size || pg.page > 0) {
                       <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
                         (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
@@ -209,7 +210,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
           <p class="text-muted-color mb-4">Current attributes of this process instance, grouped by data object.</p>
           @if (processAttributes(); as pg) {
             <app-attribute-sections [sections]="pg.sections" emptyText="This instance has no attributes." />
-            <app-tabular-tables [tables]="processTables()" exportName="instance-table" />
+            <app-tabular-tables [tables]="processTables()" [loader]="processTableLoader" exportName="instance-table" />
             <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
               (pageChange)="loadAttributes($event, pg.size)" (sizeChange)="loadAttributes(0, $event)" />
           } @else {
@@ -276,7 +277,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
             @if (stepAttributes(); as pg) {
               <div class="font-semibold mb-2 mt-3">Attributes</div>
               <app-attribute-sections [sections]="pg.sections" emptyText="This step has no attributes." />
-              <app-tabular-tables [tables]="stepTables()" exportName="step-table" />
+              <app-tabular-tables [tables]="stepTables()" [loader]="stepTableLoader" exportName="step-table" />
               @if (pg.total > pg.size || pg.page > 0) {
                 <app-pager [total]="pg.total" [page]="pg.page" [size]="pg.size" noun="attributes"
                   (pageChange)="loadStepAttributes($event, pg.size)" (sizeChange)="loadStepAttributes(0, $event)" />
@@ -490,6 +491,13 @@ export class InstanceDetailComponent implements OnInit {
       error: e => this.error.set(describeError(e))
     });
   }
+
+  /** Reads further pages of rows for the tables of the instance and of the open step. */
+  readonly processTableLoader = (doId: number, page: number, size: number) => this.api.processTable(this.id, doId, page, size);
+  readonly stepTableLoader = (doId: number, page: number, size: number) => {
+    const open = this.openStep();
+    return open === null ? EMPTY : this.api.stepTable(this.id, open, doId, page, size);
+  };
 
   loadAttributes(page: number, size: number): void {
     this.api.processAttributes(this.id, page, size).subscribe({

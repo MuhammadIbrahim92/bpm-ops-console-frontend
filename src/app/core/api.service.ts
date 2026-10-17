@@ -71,12 +71,23 @@ export class ApiService {
     return this.http.get<AttributePage>(`${this.base}/instances/${id}/attributes`, { params: toParams({ page, size }) });
   }
 
-  processTables(id: number): Observable<TabularTable[]> {
-    return this.http.get<TabularTable[]>(`${this.base}/instances/${id}/tables`);
+  /** The instance's tabular data objects, each with its first page of rows. */
+  processTables(id: number, size = 25): Observable<TabularTable[]> {
+    return this.http.get<TabularTable[]>(`${this.base}/instances/${id}/tables`, { params: toParams({ size }) });
   }
 
-  stepTables(id: number, activityInstanceId: number): Observable<TabularTable[]> {
-    return this.http.get<TabularTable[]>(`${this.base}/instances/${id}/activities/${activityInstanceId}/tables`);
+  processTable(id: number, doId: number, page: number, size: number): Observable<TabularTable> {
+    return this.http.get<TabularTable>(`${this.base}/instances/${id}/tables/${doId}`, { params: toParams({ page, size }) });
+  }
+
+  stepTables(id: number, activityInstanceId: number, size = 25): Observable<TabularTable[]> {
+    return this.http.get<TabularTable[]>(`${this.base}/instances/${id}/activities/${activityInstanceId}/tables`,
+      { params: toParams({ size }) });
+  }
+
+  stepTable(id: number, activityInstanceId: number, doId: number, page: number, size: number): Observable<TabularTable> {
+    return this.http.get<TabularTable>(`${this.base}/instances/${id}/activities/${activityInstanceId}/tables/${doId}`,
+      { params: toParams({ page, size }) });
   }
 
   stepAttributes(id: number, activityInstanceId: number, page = 0, size = 50): Observable<AttributePage> {

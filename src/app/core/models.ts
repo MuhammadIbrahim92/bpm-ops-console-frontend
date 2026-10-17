@@ -235,7 +235,10 @@ export interface TabularTable {
   doName: string;
   columns: string[];
   rows: TabularRow[];
-  truncated: boolean;
+  /** All rows of the table; `rows` is one page of them. */
+  totalRows: number;
+  page: number;
+  size: number;
 }
 
 export interface AttributePage {
