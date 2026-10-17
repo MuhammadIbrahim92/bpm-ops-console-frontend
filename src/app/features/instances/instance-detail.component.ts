@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -32,9 +32,11 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
   standalone: true,
   imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, TabularTablesComponent, SubProcessPanelComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
   template: `
-    <div class="mb-4">
-      <p-button label="All instances" icon="pi pi-arrow-left" [text]="true" routerLink="/instances" />
-    </div>
+    @if (!embedded) {
+      <div class="mb-4">
+        <p-button label="All instances" icon="pi pi-arrow-left" [text]="true" routerLink="/instances" />
+      </div>
+    }
 
     @if (error()) { <p-message severity="error" [text]="error()!" styleClass="mb-4" /> }
 
@@ -89,7 +91,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
             }
             @if (d.graph; as g) {
               <div class="split">
-                <app-diagram-view [graph]="g" [overlay]="d.overlay" [children]="subLinks()" [selectedId]="selectedId()" (selected)="onNode($event)" (focused)="selectedId.set($event || undefined)" />
+                <app-diagram-view [graph]="g" [overlay]="d.overlay" [children]="subLinks()" [compact]="embedded" [selectedId]="selectedId()" (selected)="onNode($event)" (focused)="selectedId.set($event || undefined)" />
                 <aside class="side" aria-live="polite">
                   @if (selectedNode(); as n) {
                     <div class="font-semibold text-lg">{{ n.name || n.activityId }}</div>
@@ -239,7 +241,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
       </div>
 
       <p-dialog [visible]="popup() !== null" (visibleChange)="$event ? null : closePopup()" [modal]="true" [dismissableMask]="true"
-        [draggable]="false" [style]="{ width: '64rem', 'max-width': '95vw' }" [contentStyle]="{ 'max-height': '75vh' }">
+        [draggable]="false" [style]="{ width: openChild() ? '90rem' : '64rem', 'max-width': '96vw' }" [contentStyle]="{ 'max-height': '78vh' }">
         <ng-template #header>
           @if (popup(); as pu) {
             <div class="flex items-center gap-2 flex-wrap">
@@ -251,7 +253,12 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
         </ng-template>
         @if (popup(); as pu) {
           @if (popupLinks().length > 0) {
-            <app-sub-process-panel [links]="popupLinks()" />
+            <app-sub-process-panel [links]="popupLinks()" [openId]="openChild()" (showDetails)="openChild.set($event)" />
+            @if (openChild(); as cid) {
+              <div class="embedded">
+                <app-instance-detail [instanceId]="cid" [embedded]="true" />
+              </div>
+            }
           }
           @if (pu.isStart) {
             @if (startFormError()) {
@@ -315,6 +322,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
     }
 `,
   styles: [`
+    .embedded { margin-top: 12px; padding: 12px; border: 1px dashed var(--border); border-radius: 10px; }
     .facts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; }
     .facts.col { flex-direction: column; gap: 6px; }
     .facts div { min-width: 90px; }
@@ -358,6 +366,19 @@ export class InstanceDetailComponent implements OnInit {
   readonly processAttributes = signal<AttributePage | null>(null);
   readonly processTables = signal<TabularTable[]>([]);
   readonly subLinks = signal<SubProcessLink[]>([]);
+  /** The sub-process instance shown in full inside the step popup. */
+  readonly openChild = signal<number | null>(null);
+  /** Shown inside another page's popup: no back link, a smaller drawing, and the id comes from the host. */
+  @Input() embedded = false;
+  private fixedId = false;
+
+  @Input() set instanceId(value: number | null) {
+    if (value) {
+      this.fixedId = true;
+      this.id = value;
+      this.load();
+    }
+  }
   readonly parent = signal<ParentRef | null>(null);
   /** The runs of the open step's sub-process, when it is a sub-process step. */
   readonly popupLinks = computed(() => {
@@ -418,6 +439,9 @@ export class InstanceDetailComponent implements OnInit {
   private id = 0;
 
   ngOnInit(): void {
+    if (this.fixedId) {
+      return;
+    }
     this.route.paramMap.subscribe(p => {
       this.id = Number(p.get('id'));
       this.load();
@@ -571,6 +595,7 @@ export class InstanceDetailComponent implements OnInit {
 
   /** A click on a diagram node: select it and show its attributes and saved HTML in a popup. */
   onNode(activityId: string | undefined): void {
+    this.openChild.set(null);
     this.selectedId.set(activityId);
     if (!activityId) {
       return;
@@ -621,6 +646,7 @@ export class InstanceDetailComponent implements OnInit {
   }
 
   closePopup(): void {
+    this.openChild.set(null);
     this.popup.set(null);
     this.openStep.set(null);
     this.stepAttributes.set(null);

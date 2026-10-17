@@ -1,6 +1,4 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
-import { ApiService } from '../core/api.service';
 import { InstanceSummary, SubProcessLink } from '../core/models';
 import { SubProcessPanelComponent } from './sub-process-panel.component';
 
@@ -15,18 +13,6 @@ const link = (n: number, c: InstanceSummary | null, hidden = false): SubProcessL
 });
 
 describe('SubProcessPanelComponent', () => {
-  let diagramCalls: number[];
-
-  beforeEach(() => {
-    diagramCalls = [];
-    TestBed.configureTestingModule({
-      providers: [{
-        provide: ApiService,
-        useValue: { diagram: (id: number) => { diagramCalls.push(id); return of({ overlay: { activities: [], takenEdges: [], unknownActivities: [] }, diagramError: 'No drawing.' }); } }
-      }]
-    });
-  });
-
   it('lists each run with its child, a link to a new tab, and says when the version differs', () => {
     const f = TestBed.createComponent(SubProcessPanelComponent);
     f.componentInstance.links = [link(1, child(500, 'COMPLETED')), link(2, child(501, 'STARTED', 2))];
@@ -41,17 +27,21 @@ describe('SubProcessPanelComponent', () => {
     expect(el.querySelector('a')!.getAttribute('target')).toBe('_blank');
   });
 
-  it('reads the child tracking only when asked to show it', () => {
+  it('asks the page to show the child in full, and to hide it again', () => {
     const f = TestBed.createComponent(SubProcessPanelComponent);
+    const asked: (number | null)[] = [];
+    f.componentInstance.showDetails.subscribe(v => asked.push(v));
     f.componentInstance.links = [link(1, child(500, 'COMPLETED'))];
     f.detectChanges();
-    expect(diagramCalls).toEqual([]);
-    f.componentInstance.toggle(500);
+    const el: HTMLElement = f.nativeElement;
+    (el.querySelector('p-button button') as HTMLButtonElement).click();
+    expect(asked).toEqual([500]);
+
+    f.componentInstance.openId = 500;
     f.detectChanges();
-    expect(diagramCalls).toEqual([500]);
-    f.componentInstance.toggle(500);
-    f.componentInstance.toggle(500);
-    expect(diagramCalls).toEqual([500]);
+    expect(el.textContent).toContain('Hide details');
+    (el.querySelector('p-button button') as HTMLButtonElement).click();
+    expect(asked).toEqual([500, null]);
   });
 
   it('says plainly when no child was recorded or the user may not see it', () => {
