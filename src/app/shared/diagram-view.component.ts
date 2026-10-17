@@ -261,7 +261,7 @@ interface DrawEdge {
     .dv-mini { position: absolute; right: 12px; bottom: 12px; width: 170px; height: 110px; border: 1px solid var(--border); border-radius: 8px; background: color-mix(in srgb, var(--surface) 90%, transparent); box-shadow: 0 2px 8px rgba(0,0,0,.15); cursor: pointer; }
     .dv-mini .view { fill: color-mix(in srgb, var(--accent) 15%, transparent); stroke: var(--accent); stroke-width: 3; vector-effect: non-scaling-stroke; }
     .dv-edge { fill: none; stroke: var(--c-idle); stroke-width: 1.4; opacity: 0.75; }
-    .dv-edge.taken { stroke: var(--text); stroke-width: 2.4; opacity: 1; }
+    .dv-edge.taken { stroke: var(--c-done); stroke-width: 2.6; opacity: 1; }
     .dv-edge.flow { stroke-dasharray: 8 5; animation: dv-flow .9s linear infinite; }
     .dv-edge.next { stroke: var(--accent); stroke-width: 2.2; stroke-dasharray: 3 4; opacity: 1; }
     .dv-edge.dim { opacity: .12; }
@@ -270,7 +270,7 @@ interface DrawEdge {
     .dv-eg:hover .dv-bend, .dv-bend:hover { opacity: .9; }
     .dv-node { touch-action: none; }
     .dv-arrow { fill: var(--c-idle); }
-    .dv-arrow.taken { fill: var(--text); }
+    .dv-arrow.taken { fill: var(--c-done); }
     .dv-arrow.next { fill: var(--accent); }
     .dv-node { cursor: pointer; transition: opacity .15s; }
     .dv-node.dim { opacity: .14; }
