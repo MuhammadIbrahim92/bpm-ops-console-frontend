@@ -2,6 +2,7 @@ import { Component, ElementRef, HostListener, Input, ViewChild, computed, signal
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { DiagramLayout, Route, emptyLayout, isEmptyLayout, loadLayout, orthogonal, saveLayout, snap } from '../../core/diagram-layout';
 import { Activity, KIND_LABEL, Kind, ProcessData, Transition, describeCondition, describeStep } from './xpdl';
 
 type Mode =
@@ -71,6 +72,9 @@ interface Edge extends Transition {
       <button type="button" class="pct" (click)="zoomTo(1)" title="Back to 100%">{{ zoomPct() }}%</button>
       <p-button type="button" icon="pi pi-search-minus" size="small" severity="secondary" [outlined]="true" (onClick)="zoomBy(-0.2)" ariaLabel="Zoom out" />
       <p-button type="button" icon="pi pi-expand" size="small" severity="secondary" [outlined]="true" (onClick)="fit()" ariaLabel="Fit to window" />
+      @if (hasLayout()) {
+        <p-button type="button" icon="pi pi-undo" label="Reset layout" size="small" severity="secondary" [outlined]="true" (onClick)="resetLayout()" />
+      }
       <span class="sep"></span>
       <p-select [ngModel]="null" (ngModelChange)="goTo($event)" [options]="stepOptions()" optionLabel="name" optionValue="id"
         [filter]="true" filterBy="name" placeholder="Find a step" styleClass="find" [showClear]="false" />
@@ -124,8 +128,9 @@ interface Edge extends Transition {
                 <path [attr.d]="e.d" class="e" [class.link]="e.t.link" [class.hl]="highlightEdge(e.t.id)" [class.flow]="flowEdge(e.t.id)" [class.next]="nextEdge(e.t.id)"
                       [attr.marker-end]="e.t.link ? 'url(#xd-arrow-to)' : (highlightEdge(e.t.id) || nextEdge(e.t.id)) ? 'url(#xd-arrow-hl)' : 'url(#xd-arrow)'" />
                 <path [attr.d]="e.d" class="eh" (click)="pickEdge(e.t.id, $event)" />
+                <circle class="bend" [attr.cx]="e.mx" [attr.cy]="e.my" r="5" [attr.data-bend]="e.t.id" [attr.data-horiz]="e.horiz" (click)="pickEdge(e.t.id, $event)"><title>Drag to bend this arrow</title></circle>
                 @if (e.t.cond) {
-                  <g class="cond" [attr.transform]="'translate(' + e.mx + ' ' + e.my + ')'" (click)="pickEdge(e.t.id, $event)">
+                  <g class="cond" [attr.transform]="'translate(' + e.mx + ' ' + e.my + ')'" [attr.data-bend]="e.t.id" [attr.data-horiz]="e.horiz" (click)="pickEdge(e.t.id, $event)">
                     <title>{{ plain(e.t.cond) }}</title>
                     <circle r="7.5" />
                     <path d="M0 -3.4v4M0 3.6v.4" />
@@ -136,7 +141,7 @@ interface Edge extends Transition {
 
             @for (n of geometry().nodes; track n.a.id) {
               <g class="n" [class.dim]="dimNode(n.a)" [class.sel]="isSelected(n.a.id)" [class.cur]="isCurrent(n.a.id)"
-                 [class.hid]="hidden().has(n.a.k)" tabindex="0" role="button" [attr.aria-label]="n.a.name + ', ' + label[n.a.k]"
+                 [class.hid]="hidden().has(n.a.k)" [attr.data-id]="n.a.id" tabindex="0" role="button" [attr.aria-label]="n.a.name + ', ' + label[n.a.k]"
                  (click)="pickNode(n.a.id, $event)" (keydown.enter)="pickNode(n.a.id, $event)">
                 <title>{{ n.a.name }} ({{ label[n.a.k] }})</title>
                 @if (isNext(n.a.id)) {
@@ -174,7 +179,7 @@ interface Edge extends Transition {
         @switch (mode().kind) {
           @case ('none') {
             <p class="text-muted-color"><i class="pi pi-info-circle mr-1"></i>Select a step or an arrow to see its details, or press <b>Trace from start</b> to follow the flow.</p>
-            <p class="text-muted-color small"><i class="pi pi-arrows-alt mr-1"></i>Drag to move around. Ctrl and wheel to zoom.</p>
+            <p class="text-muted-color small"><i class="pi pi-arrows-alt mr-1"></i>Drag the background to move around, Ctrl and wheel to zoom. Drag a step to move it, or the dot on an arrow to bend it.</p>
           }
           @case ('node') {
             @if (selectedNode(); as a) {
@@ -271,7 +276,7 @@ interface Edge extends Transition {
     .crumb.cur { font-weight: 700; color: var(--p-primary-color, #2f5fd0); background: color-mix(in srgb, var(--p-primary-color, #2f5fd0) 14%, transparent); }
     .stage { position: relative; }
     .canvas { border: 1px solid var(--p-content-border-color, #d5d9e0); border-radius: 12px; overflow: auto; height: 68vh; background:
-      radial-gradient(circle, color-mix(in srgb, var(--p-text-muted-color, #667085) 28%, transparent) 1px, transparent 1.2px) 0 0 / 22px 22px, var(--p-content-background, #fff); cursor: grab; outline: none; }
+      radial-gradient(circle, color-mix(in srgb, var(--p-text-muted-color, #667085) 28%, transparent) 1px, transparent 1.2px) 0 0 / 22px 22px, var(--p-content-background, #fff); cursor: grab; outline: none; user-select: none; }
     .canvas.drag { cursor: grabbing; }
     .canvas:focus-visible { box-shadow: 0 0 0 2px var(--p-primary-color, #2f5fd0); }
     .mini { position: absolute; right: 14px; bottom: 14px; width: 170px; height: 110px; border: 1px solid var(--p-content-border-color, #d5d9e0); border-radius: 8px; background: color-mix(in srgb, var(--p-content-background, #fff) 90%, transparent); box-shadow: 0 2px 8px rgba(0,0,0,.15); cursor: pointer; }
@@ -305,6 +310,9 @@ interface Edge extends Transition {
     svg .e.hl { stroke: #2f5fd0; stroke-width: 2.6; opacity: 1; }
     svg .e.flow { stroke-dasharray: 8 5; animation: xd-flow 0.8s linear infinite; }
     svg .e.next { stroke: #2f5fd0; stroke-width: 2.2; opacity: 1; stroke-dasharray: 3 4; }
+    svg .bend { fill: var(--p-primary-color, #2f5fd0); stroke: var(--p-content-background, #fff); stroke-width: 1.5; opacity: 0; cursor: move; transition: opacity .12s; }
+    svg g:hover > .bend, svg .bend:hover { opacity: 0.9; }
+    svg .n { touch-action: none; }
     svg .eh { stroke: transparent; stroke-width: 12; fill: none; cursor: pointer; }
     svg .cond { cursor: pointer; }
     svg .cond circle { fill: var(--p-content-background, #fff); stroke: var(--p-text-muted-color, #667085); stroke-width: 1.4; }
@@ -328,6 +336,7 @@ export class XpdlDiagramComponent {
 
   @Input({ required: true }) set data(value: ProcessData) {
     this.model.set(value);
+    this.layout.set(loadLayout(value.M.file));
     this.mode.set({ kind: 'none' });
     this.hidden.set(new Set());
     this.zoom.set(1);
@@ -348,6 +357,8 @@ export class XpdlDiagramComponent {
   readonly hidden = signal<Set<Kind>>(new Set());
   readonly zoom = signal(1);
   readonly dragging = signal(false);
+  readonly layout = signal<DiagramLayout>(emptyLayout());
+  readonly hasLayout = computed(() => !isEmptyLayout(this.layout()));
   private readonly scroll = signal({ l: 0, t: 0, w: 1, h: 1 });
 
   readonly zoomPct = computed(() => Math.round(this.zoom() * 100));
@@ -370,59 +381,49 @@ export class XpdlDiagramComponent {
   });
   readonly stepOptions = computed(() => this.acts().map(a => ({ id: a.id, name: a.name })));
 
-  /** Positions and paths, in the coordinates of the drawing. */
+  /** Positions and paths, in the coordinates of the drawing (the definition's layout plus whatever was moved). */
   readonly geometry = computed(() => {
     const acts = this.acts();
+    const lay = this.layout();
     let minx = 1e9, miny = 1e9, maxx = 0, maxy = 0;
+    const at = (a: Activity): [number, number] => [a.x + (lay.n[a.id]?.[0] ?? 0), a.y + (lay.n[a.id]?.[1] ?? 0)];
     acts.forEach(a => {
+      // the origin stays where the definition put it, so moving a step never shifts the whole drawing
       minx = Math.min(minx, a.x);
       miny = Math.min(miny, a.y);
-      maxx = Math.max(maxx, a.x + a.w);
-      maxy = Math.max(maxy, a.y + a.h);
+      const [x, y] = at(a);
+      maxx = Math.max(maxx, x + a.w);
+      maxy = Math.max(maxy, y + a.h);
     });
     if (!acts.length) {
-      return { w: 100, h: 100, nodes: [], edges: [] as { t: Edge; d: string; mx: number; my: number }[] };
+      return { w: 100, h: 100, ox: 0, oy: 0, nodes: [], edges: [] as { t: Edge; d: string; mx: number; my: number; horiz: boolean }[] };
     }
     const pad = 44;
-    const centre = (a: Activity): [number, number] => [a.x - minx + pad + a.w / 2, a.y - miny + pad + a.h / 2];
+    const box = (a: Activity) => {
+      const [x, y] = at(a);
+      return { x: x - minx + pad, y: y - miny + pad, w: a.w, h: a.h };
+    };
     const nodes = acts.map(a => {
-      const [cx, cy] = centre(a);
+      const bx = box(a);
+      const cx = bx.x + a.w / 2;
+      const cy = bx.y + a.h / 2;
       const shape = a.k === 'start' || a.k === 'end' || a.k === 'timer' ? 'circle' : a.k === 'gw' ? 'diamond' : 'box';
       const d = `M${cx} ${cy - a.h / 2 - 3}L${cx + a.w / 2 + 3} ${cy}L${cx} ${cy + a.h / 2 + 3}L${cx - a.w / 2 - 3} ${cy}z`;
       const s = Math.max(12, Math.min(a.w, a.h) * (shape === 'diamond' ? 0.5 : 0.58));
       const iconTransform = `translate(${cx - s / 2} ${cy - s / 2}) scale(${s / 24})`;
       return { a, cx, cy, shape, r: a.w / 2 + (a.k === 'timer' ? 0 : 1), d, iconTransform };
     });
-    const edges: { t: Edge; d: string; mx: number; my: number }[] = [];
+    const edges: { t: Edge; d: string; mx: number; my: number; horiz: boolean }[] = [];
     for (const t of this.edgesAll()) {
       const a = this.byId().get(t.f);
       const b = this.byId().get(t.t);
       if (!a || !b) {
         continue;
       }
-      const [ax, ay] = centre(a);
-      const [bx, by] = centre(b);
-      const dx = bx - ax;
-      const dy = by - ay;
-      let d: string;
-      let mx: number;
-      let my: number;
-      if (Math.abs(dx) >= Math.abs(dy)) {
-        const sx = ax + Math.sign(dx || 1) * (a.w / 2 + 2);
-        const tx = bx - Math.sign(dx || 1) * (b.w / 2 + 2);
-        mx = (sx + tx) / 2;
-        my = (ay + by) / 2;
-        d = `M${sx} ${ay}H${mx}V${by}H${tx}`;
-      } else {
-        const sy = ay + Math.sign(dy) * (a.h / 2 + 2);
-        const ty = by - Math.sign(dy) * (b.h / 2 + 2);
-        my = (sy + ty) / 2;
-        mx = (ax + bx) / 2;
-        d = `M${ax} ${sy}V${my}H${bx}V${ty}`;
-      }
-      edges.push({ t, d, mx, my });
+      const r: Route = orthogonal(box(a), box(b), lay.b[t.id] ?? 0);
+      edges.push({ t, d: r.d, mx: r.mx, my: r.my, horiz: r.horiz });
     }
-    return { w: maxx - minx + pad * 2, h: maxy - miny + pad * 2 + 20, nodes, edges };
+    return { w: maxx - minx + pad * 2, h: maxy - miny + pad * 2 + 20, ox: minx, oy: miny, nodes, edges };
   });
 
   /** The visible window in drawing coordinates, for the minimap. */
@@ -643,9 +644,31 @@ export class XpdlDiagramComponent {
   }
 
   private drag: { x: number; y: number; l: number; t: number; moved: boolean } | null = null;
+  private moving: { kind: 'node' | 'bend'; id: string; x: number; y: number; base: [number, number] | number; moved: boolean; horiz?: boolean } | null = null;
+  /** Set for the click that follows a drag, so letting go of a moved step does not also select it. */
+  private suppress = false;
+
   down(e: PointerEvent): void {
     const el = this.canvas?.nativeElement;
-    if (!el || e.button !== 0 || (e.target as Element).closest('.n, .eh, .cond')) {
+    if (!el || e.button !== 0) {
+      return;
+    }
+    const target = e.target as Element;
+    const bendEl = target.closest('[data-bend]');
+    const nodeEl = target.closest('.n');
+    if (bendEl || nodeEl) {
+      const lay = this.layout();
+      if (bendEl) {
+        const id = bendEl.getAttribute('data-bend')!;
+        this.moving = { kind: 'bend', id, x: e.clientX, y: e.clientY, base: lay.b[id] ?? 0, moved: false, horiz: bendEl.getAttribute('data-horiz') === 'true' };
+      } else {
+        const id = nodeEl!.getAttribute('data-id')!;
+        this.moving = { kind: 'node', id, x: e.clientX, y: e.clientY, base: lay.n[id] ?? [0, 0], moved: false };
+      }
+      el.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (target.closest('.eh')) {
       return;
     }
     this.drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop, moved: false };
@@ -653,6 +676,29 @@ export class XpdlDiagramComponent {
   }
   move(e: PointerEvent): void {
     const el = this.canvas?.nativeElement;
+    if (this.moving) {
+      const m = this.moving;
+      const dx = (e.clientX - m.x) / this.zoom();
+      const dy = (e.clientY - m.y) / this.zoom();
+      if (!m.moved && Math.abs(dx) + Math.abs(dy) < 3 / this.zoom()) {
+        return;
+      }
+      m.moved = true;
+      this.dragging.set(true);
+      if (m.kind === 'node') {
+        const a = this.byId().get(m.id)!;
+        const g = this.geometry();
+        const base = m.base as [number, number];
+        // keep it inside the drawing's top left corner, so the drawing does not shift under the pointer
+        const nx = Math.max(g.ox - a.x, snap(base[0] + dx));
+        const ny = Math.max(g.oy - a.y, snap(base[1] + dy));
+        this.layout.update(l => ({ ...l, n: { ...l.n, [m.id]: [nx, ny] } }));
+      } else {
+        const delta = m.horiz ? dx : dy;
+        this.layout.update(l => ({ ...l, b: { ...l.b, [m.id]: snap((m.base as number) + delta, 5) } }));
+      }
+      return;
+    }
     if (!this.drag || !el) {
       return;
     }
@@ -667,6 +713,20 @@ export class XpdlDiagramComponent {
   }
   up(e: PointerEvent): void {
     const el = this.canvas?.nativeElement;
+    if (this.moving) {
+      el?.releasePointerCapture?.(e.pointerId);
+      if (this.moving.moved) {
+        this.suppress = true;
+        setTimeout(() => (this.suppress = false), 0);
+        const data = this.model();
+        if (data) {
+          saveLayout(data.M.file, this.layout());
+        }
+      }
+      this.moving = null;
+      this.dragging.set(false);
+      return;
+    }
     if (this.drag && el) {
       el.releasePointerCapture?.(e.pointerId);
       // a click on the empty background (no drag) closes the details, but never ends a trace
@@ -676,6 +736,13 @@ export class XpdlDiagramComponent {
     }
     this.drag = null;
     this.dragging.set(false);
+  }
+  resetLayout(): void {
+    this.layout.set(emptyLayout());
+    const data = this.model();
+    if (data) {
+      saveLayout(data.M.file, emptyLayout());
+    }
   }
   miniClick(e: MouseEvent): void {
     const svg = e.currentTarget as SVGSVGElement;
@@ -697,6 +764,9 @@ export class XpdlDiagramComponent {
   // ---- selection and trace ----
   pickNode(id: string, e?: Event): void {
     e?.stopPropagation();
+    if (this.suppress) {
+      return;
+    }
     const m = this.mode();
     if (m.kind === 'trace') {
       const next = this.options().find(o => o.to === id);
@@ -715,6 +785,9 @@ export class XpdlDiagramComponent {
   }
   pickEdge(id: string, e?: Event): void {
     e?.stopPropagation();
+    if (this.suppress) {
+      return;
+    }
     if (this.mode().kind === 'trace') {
       return;
     }

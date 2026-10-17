@@ -8,6 +8,7 @@ import {
 } from '../core/diagram-geometry';
 import { formatDuration } from '../core/format';
 import { activityLook } from '../core/status';
+import { DiagramLayout, emptyLayout, isEmptyLayout, loadLayout, orthogonal, saveLayout, snap } from '../core/diagram-layout';
 
 interface Icon {
   d: string;
@@ -69,6 +70,10 @@ interface DrawEdge {
   taken: boolean;
   source: string;
   target: string;
+  /** Where the grip sits, and which way dragging it pushes the middle segment. */
+  mx: number;
+  my: number;
+  horiz: boolean;
 }
 
 /**
@@ -101,6 +106,9 @@ interface DrawEdge {
           </span>
           <p-button type="button" icon="pi pi-chevron-right" size="small" severity="danger" [outlined]="true" (onClick)="nextProblem(1)" ariaLabel="Next step that needs a look" />
         </span>
+      }
+      @if (hasLayout) {
+        <p-button type="button" icon="pi pi-undo" label="Reset layout" size="small" severity="secondary" [outlined]="true" (onClick)="resetLayout()" />
       }
       <span class="dv-spacer"></span>
       <span class="dv-legend" aria-label="Legend: click a state to focus on it">
@@ -148,11 +156,15 @@ interface DrawEdge {
           </marker>
         </defs>
         @for (e of edges; track e.id) {
-          <path class="dv-edge" [class.taken]="e.taken" [class.flow]="isFlow(e)" [class.next]="isNextEdge(e)" [class.dim]="dimEdge(e)" [attr.d]="e.d"
-                [attr.marker-end]="isNextEdge(e) ? 'url(#dv-arrow-next)' : e.taken ? 'url(#dv-arrow-taken)' : 'url(#dv-arrow)'"></path>
+          <g class="dv-eg">
+            <path class="dv-edge" [class.taken]="e.taken" [class.flow]="isFlow(e)" [class.next]="isNextEdge(e)" [class.dim]="dimEdge(e)" [attr.d]="e.d"
+                  [attr.marker-end]="isNextEdge(e) ? 'url(#dv-arrow-next)' : e.taken ? 'url(#dv-arrow-taken)' : 'url(#dv-arrow)'"></path>
+            <path class="dv-eh" [attr.d]="e.d"></path>
+            <circle class="dv-bend" [attr.cx]="e.mx" [attr.cy]="e.my" r="5" [attr.data-bend]="e.id" [attr.data-horiz]="e.horiz"><title>Drag to bend this arrow</title></circle>
+          </g>
         }
         @for (d of nodes; track d.n.id) {
-          <g [class]="'dv-node st-' + d.cls" [class.selected]="d.n.activityId === selectedId" [class.dim]="dimNode(d)" [class.current]="isCurrent(d)"
+          <g [class]="'dv-node st-' + d.cls" [attr.data-id]="d.n.activityId" [class.selected]="d.n.activityId === selectedId" [class.dim]="dimNode(d)" [class.current]="isCurrent(d)"
              tabindex="0" role="button" [attr.aria-label]="d.aria" (click)="pick(d)" (keydown.enter)="pick(d)" (keydown.space)="pick(d); $event.preventDefault()">
             <title>{{ d.aria }}</title>
             @if (isNext(d)) {
@@ -253,6 +265,10 @@ interface DrawEdge {
     .dv-edge.flow { stroke-dasharray: 8 5; animation: dv-flow .9s linear infinite; }
     .dv-edge.next { stroke: var(--accent); stroke-width: 2.2; stroke-dasharray: 3 4; opacity: 1; }
     .dv-edge.dim { opacity: .12; }
+    .dv-eh { fill: none; stroke: transparent; stroke-width: 12; }
+    .dv-bend { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; opacity: 0; cursor: move; transition: opacity .12s; }
+    .dv-eg:hover .dv-bend, .dv-bend:hover { opacity: .9; }
+    .dv-node { touch-action: none; }
     .dv-arrow { fill: var(--c-idle); }
     .dv-arrow.taken { fill: var(--text); }
     .dv-arrow.next { fill: var(--accent); }
@@ -320,12 +336,22 @@ export class DiagramViewComponent implements OnChanges {
   private orderIndex = new Map<string, number>();
   private byId = new Map<string, DrawNode>();
   private drag?: { px: number; py: number; vx: number; vy: number; moved: boolean };
+  private moving?: { kind: 'node' | 'bend'; id: string; px: number; py: number; base: [number, number] | number; moved: boolean; horiz?: boolean };
+  /** Set for the click that follows a drag, so letting go of a moved step does not also select it. */
+  private suppress = false;
+  private states = new Map<string, ActivityState>();
+  private taken = new Set<string>();
+  private layoutKey = '';
+  layout: DiagramLayout = emptyLayout();
 
   get vbText(): string {
     return `${this.vb.x} ${this.vb.y} ${this.vb.w} ${this.vb.h}`;
   }
   get fitText(): string {
     return `${this.fitBox.x} ${this.fitBox.y} ${this.fitBox.w} ${this.fitBox.h}`;
+  }
+  get hasLayout(): boolean {
+    return !isEmptyLayout(this.layout);
   }
   get zoomPct(): number {
     return Math.round((this.fitBox.w / this.vb.w) * 100);
@@ -351,17 +377,47 @@ export class DiagramViewComponent implements OnChanges {
   }
 
   private build(): void {
-    const states = new Map<string, ActivityState>();
-    for (const s of this.overlay?.activities ?? []) {
-      states.set(s.activityId, s);
+    this.states = new Map<string, ActivityState>();
+    for (const st of this.overlay?.activities ?? []) {
+      this.states.set(st.activityId, st);
     }
-    const taken = new Set(this.overlay?.takenEdges ?? []);
+    this.taken = new Set(this.overlay?.takenEdges ?? []);
+    // one arrangement per process, shared by every instance of it
+    this.layoutKey = `inst:${this.graph.processName ?? ''}:${this.graph.nodes.length}:${this.graph.nodes[0]?.activityId ?? ''}`;
+    this.layout = loadLayout(this.layoutKey);
+    this.relayout();
+    this.fitBox = this.currentFit();
+    this.vb = { ...this.fitBox };
+  }
+
+  /** Where the drawing ends when steps have been moved: never smaller than the definition's own bounds. */
+  private currentFit(): ViewBox {
+    const g = this.graph;
+    let minX = g.minX, minY = g.minY, maxX = g.maxX, maxY = g.maxY;
+    for (const d of this.nodes) {
+      minX = Math.min(minX, d.n.x);
+      minY = Math.min(minY, d.n.y);
+      maxX = Math.max(maxX, d.n.x + d.n.width);
+      maxY = Math.max(maxY, d.n.y + d.n.height);
+    }
+    return viewBoxOf({ ...g, minX, minY, maxX, maxY });
+  }
+
+  /** Builds the shapes and arrows from the definition's layout plus whatever was moved. Keeps the zoom and position. */
+  private relayout(): void {
+    const states = this.states;
+    const taken = this.taken;
+    const lay = this.layout;
+    const eff: DiagramNode[] = this.graph.nodes.map(n => {
+      const o = lay.n[n.activityId];
+      return o ? { ...n, x: n.x + o[0], y: n.y + o[1] } : n;
+    });
     const byActivity = new Map<string, DiagramNode>();
-    for (const n of this.graph.nodes) {
+    for (const n of eff) {
       byActivity.set(n.activityId, n);
     }
 
-    this.nodes = this.graph.nodes.map(n => {
+    this.nodes = eff.map(n => {
       const s = states.get(n.activityId);
       const look = activityLook(s?.status);
       const shape = shapeOf(n.kind);
@@ -406,9 +462,36 @@ export class DiagramViewComponent implements OnChanges {
     });
     this.byId = new Map(this.nodes.map(d => [d.n.activityId, d] as const));
 
-    this.edges = this.graph.edges
-      .map(e => ({ id: e.id, d: toPath(edgePoints(e, byActivity)), taken: taken.has(e.id), source: e.sourceActivityId, target: e.targetActivityId }))
-      .filter(e => e.d.length > 0);
+    const edges: DrawEdge[] = [];
+    for (const e of this.graph.edges) {
+      const s = byActivity.get(e.sourceActivityId);
+      const t = byActivity.get(e.targetActivityId);
+      if (!s || !t) {
+        continue;
+      }
+      const bend = lay.b[e.id];
+      let d: string;
+      let mx: number;
+      let my: number;
+      let horiz: boolean;
+      if (bend !== undefined || lay.n[s.activityId] || lay.n[t.activityId]) {
+        // a moved step or a bent arrow is drawn in right angles between the two steps
+        const r = orthogonal({ x: s.x, y: s.y, w: s.width, h: s.height }, { x: t.x, y: t.y, w: t.width, h: t.height }, bend ?? 0);
+        ({ d, mx, my, horiz } = r);
+      } else {
+        const pts = edgePoints(e, byActivity);
+        d = toPath(pts);
+        const m = midPoint(pts);
+        mx = m.x;
+        my = m.y;
+        // same rule as the right-angle route, so the first drag pushes the segment the way it looks like it should
+        horiz = Math.abs(t.x + t.width / 2 - (s.x + s.width / 2)) >= Math.abs(t.y + t.height / 2 - (s.y + s.height / 2));
+      }
+      if (d.length > 0) {
+        edges.push({ id: e.id, d, taken: taken.has(e.id), source: e.sourceActivityId, target: e.targetActivityId, mx, my, horiz });
+      }
+    }
+    this.edges = edges;
 
     this.stepOptions = this.nodes.map(d => ({ id: d.n.activityId, name: d.n.name?.trim() || d.n.activityId }));
 
@@ -425,9 +508,6 @@ export class DiagramViewComponent implements OnChanges {
     this.nodes.forEach(d => counts.set(d.cls, (counts.get(d.cls) ?? 0) + 1));
     this.legend = ['running', 'done', 'failed', 'timeout', 'suspended', 'pending', 'unknown']
       .filter(c => counts.has(c)).map(c => ({ cls: c, text: STATUS_TEXT[c], count: counts.get(c)! }));
-
-    this.fitBox = viewBoxOf(this.graph);
-    this.vb = { ...this.fitBox };
   }
 
   /** Works out what is lit up: the followed run, the selected step and its neighbours, or one state. */
@@ -498,7 +578,7 @@ export class DiagramViewComponent implements OnChanges {
 
   // ---- selection, search, issues, following the run ----
   pick(d: DrawNode): void {
-    if (this.drag?.moved) {
+    if (this.suppress) {
       return;
     }
     if (this.replay !== null) {
@@ -581,7 +661,18 @@ export class DiagramViewComponent implements OnChanges {
   }
 
   onDown(e: PointerEvent): void {
-    if ((e.target as Element).closest('.dv-node')) {
+    const target = e.target as Element;
+    const bendEl = target.closest('[data-bend]');
+    const nodeEl = target.closest('.dv-node');
+    if (bendEl || nodeEl) {
+      if (bendEl) {
+        const id = bendEl.getAttribute('data-bend')!;
+        this.moving = { kind: 'bend', id, px: e.clientX, py: e.clientY, base: this.layout.b[id] ?? 0, moved: false, horiz: bendEl.getAttribute('data-horiz') === 'true' };
+      } else {
+        const id = nodeEl!.getAttribute('data-id')!;
+        this.moving = { kind: 'node', id, px: e.clientX, py: e.clientY, base: this.layout.n[id] ?? [0, 0], moved: false };
+      }
+      this.svg.nativeElement.setPointerCapture(e.pointerId);
       return;
     }
     this.drag = { px: e.clientX, py: e.clientY, vx: this.vb.x, vy: this.vb.y, moved: false };
@@ -589,10 +680,29 @@ export class DiagramViewComponent implements OnChanges {
   }
 
   onMove(e: PointerEvent): void {
+    const scale = this.scale();
+    if (this.moving) {
+      const m = this.moving;
+      const dx = (e.clientX - m.px) * scale;
+      const dy = (e.clientY - m.py) * scale;
+      if (!m.moved && Math.abs(e.clientX - m.px) + Math.abs(e.clientY - m.py) < 4) {
+        return;
+      }
+      m.moved = true;
+      if (m.kind === 'node') {
+        const base = m.base as [number, number];
+        this.layout = { ...this.layout, n: { ...this.layout.n, [m.id]: [snap(base[0] + dx), snap(base[1] + dy)] } };
+      } else {
+        const delta = m.horiz ? dx : dy;
+        this.layout = { ...this.layout, b: { ...this.layout.b, [m.id]: snap((m.base as number) + delta, 5) } };
+      }
+      this.relayout();
+      this.refresh();
+      return;
+    }
     if (!this.drag) {
       return;
     }
-    const scale = this.scale();
     const dx = e.clientX - this.drag.px;
     const dy = e.clientY - this.drag.py;
     if (Math.abs(dx) + Math.abs(dy) > 3) {
@@ -602,12 +712,26 @@ export class DiagramViewComponent implements OnChanges {
   }
 
   onUp(e: PointerEvent): void {
-    if (this.drag) {
+    const release = () => {
       try {
         this.svg.nativeElement.releasePointerCapture(e.pointerId);
       } catch {
         // capture already released
       }
+    };
+    if (this.moving) {
+      release();
+      if (this.moving.moved) {
+        this.suppress = true;
+        setTimeout(() => (this.suppress = false), 0);
+        saveLayout(this.layoutKey, this.layout);
+        this.fitBox = this.currentFit();
+      }
+      this.moving = undefined;
+      return;
+    }
+    if (this.drag) {
+      release();
       const moved = this.drag.moved;
       this.drag = undefined;
       if (!moved && (e.target as Element) === this.svg.nativeElement && this.replay === null && this.selectedId) {
@@ -615,6 +739,14 @@ export class DiagramViewComponent implements OnChanges {
         this.focused.emit('');
       }
     }
+  }
+
+  resetLayout(): void {
+    this.layout = emptyLayout();
+    saveLayout(this.layoutKey, this.layout);
+    this.relayout();
+    this.refresh();
+    this.fitBox = this.currentFit();
   }
 
   miniClick(e: MouseEvent): void {
@@ -642,4 +774,25 @@ export class DiagramViewComponent implements OnChanges {
     const offY = (r.height - this.vb.h / s) / 2;
     return { x: (clientX - r.left - offX) * s + this.vb.x, y: (clientY - r.top - offY) * s + this.vb.y };
   }
+}
+
+/** The point half way along a polyline, where the grip for bending the arrow sits. */
+function midPoint(points: { x: number; y: number }[]): { x: number; y: number } {
+  if (points.length === 0) {
+    return { x: 0, y: 0 };
+  }
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    total += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+  }
+  let walk = total / 2;
+  for (let i = 1; i < points.length; i++) {
+    const seg = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+    if (seg >= walk && seg > 0) {
+      const f = walk / seg;
+      return { x: points[i - 1].x + (points[i].x - points[i - 1].x) * f, y: points[i - 1].y + (points[i].y - points[i - 1].y) * f };
+    }
+    walk -= seg;
+  }
+  return points[points.length - 1];
 }
