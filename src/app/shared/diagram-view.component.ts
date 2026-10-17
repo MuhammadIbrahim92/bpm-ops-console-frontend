@@ -672,7 +672,7 @@ export class DiagramViewComponent implements OnChanges {
         const id = nodeEl!.getAttribute('data-id')!;
         this.moving = { kind: 'node', id, px: e.clientX, py: e.clientY, base: this.layout.n[id] ?? [0, 0], moved: false };
       }
-      this.svg.nativeElement.setPointerCapture(e.pointerId);
+      // no pointer capture yet: it would redirect the click away from the step. It starts when the drag does.
       return;
     }
     this.drag = { px: e.clientX, py: e.clientY, vx: this.vb.x, vy: this.vb.y, moved: false };
@@ -689,6 +689,7 @@ export class DiagramViewComponent implements OnChanges {
         return;
       }
       m.moved = true;
+      this.svg.nativeElement.setPointerCapture(e.pointerId);
       if (m.kind === 'node') {
         const base = m.base as [number, number];
         this.layout = { ...this.layout, n: { ...this.layout.n, [m.id]: [snap(base[0] + dx), snap(base[1] + dy)] } };

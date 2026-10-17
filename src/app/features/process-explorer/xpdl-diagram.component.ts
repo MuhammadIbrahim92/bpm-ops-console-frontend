@@ -665,7 +665,7 @@ export class XpdlDiagramComponent {
         const id = nodeEl!.getAttribute('data-id')!;
         this.moving = { kind: 'node', id, x: e.clientX, y: e.clientY, base: lay.n[id] ?? [0, 0], moved: false };
       }
-      el.setPointerCapture(e.pointerId);
+      // no pointer capture yet: it would redirect the click away from the step. It starts when the drag does.
       return;
     }
     if (target.closest('.eh')) {
@@ -684,6 +684,7 @@ export class XpdlDiagramComponent {
         return;
       }
       m.moved = true;
+      el?.setPointerCapture(e.pointerId);
       this.dragging.set(true);
       if (m.kind === 'node') {
         const a = this.byId().get(m.id)!;
