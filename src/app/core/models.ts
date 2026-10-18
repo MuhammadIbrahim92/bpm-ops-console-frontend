@@ -45,12 +45,32 @@ export type NodeKind =
   | 'START' | 'END' | 'USER_TASK' | 'SCRIPT_TASK' | 'DATABASE_TASK' | 'SERVICE_TASK'
   | 'SUB_PROCESS' | 'GATEWAY_EXCLUSIVE' | 'GATEWAY_FORK' | 'ERROR_EVENT' | 'OTHER';
 
+/** One parameter of a stored procedure call and the process variable it is tied to. */
+export interface DbParameter {
+  name: string;
+  mode: string;
+  type: string;
+  variable: string;
+}
+
+/** The stored procedure a database step calls. */
+export interface DbCall {
+  application: string;
+  procedure: string;
+  connection: string;
+  parameters: DbParameter[];
+}
+
 export interface DiagramNode {
   id: string;
   activityId: string;
   /** For a sub-process step: the process and version the drawing names. */
   subProcessId?: string | null;
   subProcessVersion?: string | null;
+  /** For a script step: the script text. */
+  script?: string | null;
+  /** For a database step: the procedure it calls. */
+  dbCall?: DbCall | null;
   name?: string;
   kind: NodeKind;
   x: number;

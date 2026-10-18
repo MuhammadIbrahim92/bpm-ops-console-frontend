@@ -18,6 +18,7 @@ import { RequestTablesComponent } from '../../shared/request-tables.component';
 import { activityLook, instanceLook, requestLook } from '../../core/status';
 import { EMPTY } from 'rxjs';
 import { conditionVariables, describeCondition, evaluateCondition } from '../process-explorer/xpdl';
+import { StepDefinitionComponent } from '../../shared/step-definition.component';
 import { SubProcessPanelComponent } from '../../shared/sub-process-panel.component';
 import { TabularTablesComponent } from '../../shared/tabular-tables.component';
 import { DiagramViewComponent } from '../../shared/diagram-view.component';
@@ -31,7 +32,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
 @Component({
   selector: 'app-instance-detail',
   standalone: true,
-  imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, TabularTablesComponent, SubProcessPanelComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
+  imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, TabularTablesComponent, SubProcessPanelComponent, StepDefinitionComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
   template: `
     @if (!embedded) {
       <div class="mb-4">
@@ -127,6 +128,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
                   } @else if (selectedNode(); as n) {
                     <div class="font-semibold text-lg">{{ n.name || n.activityId }}</div>
                     <p class="mono text-muted-color">{{ n.activityId }}</p>
+                    <app-step-definition [node]="n" />
                     @if (selectedState(); as s) {
                       <p class="my-2"><app-status-badge [look]="actLook(s.status)" />
                         @if (s.overdue) { <p-tag value="Overdue task" severity="danger" styleClass="ml-2" /> }</p>
@@ -285,6 +287,9 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
           }
         </ng-template>
         @if (popup(); as pu) {
+          @if (popupNode(); as pn) {
+            <app-step-definition [node]="pn" />
+          }
           @if (popupLinks().length > 0) {
             <app-sub-process-panel [links]="popupLinks()" [openId]="openChild()" (showDetails)="openChild.set($event)" />
             @if (openChild(); as cid) {
@@ -399,6 +404,12 @@ export class InstanceDetailComponent implements OnInit {
   readonly processAttributes = signal<AttributePage | null>(null);
   readonly processTables = signal<TabularTable[]>([]);
   readonly subLinks = signal<SubProcessLink[]>([]);
+  /** The drawing's node of the step in the popup, for its script or procedure. */
+  readonly popupNode = computed(() => {
+    const pu = this.popup();
+    const n = pu ? this.diagram()?.graph?.nodes.find(x => x.activityId === pu.activityId) : undefined;
+    return n && (n.script || n.dbCall) ? n : null;
+  });
   /** The sub-process instance shown in full inside the step popup. */
   readonly openChild = signal<number | null>(null);
   /** Shown inside another page's popup: no back link, a smaller drawing, and the id comes from the host. */
