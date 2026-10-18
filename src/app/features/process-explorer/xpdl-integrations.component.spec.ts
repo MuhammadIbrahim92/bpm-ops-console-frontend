@@ -28,4 +28,27 @@ describe('XpdlIntegrationsComponent', () => {
     const names = Array.from(el.querySelectorAll('.box > div:first-child b')).map(b => b.textContent!.trim());
     expect(names.length).toBe(data.M.integ.length);
   });
+
+  it('folds the used and not used lists away and back', async () => {
+    const text = await (await fetch(BASE + 'p4177-v6.xml')).text();
+    const data = parseXpdl(text, 'p4177-v6.xml');
+    const f = TestBed.createComponent(XpdlIntegrationsComponent);
+    f.componentInstance.model = data;
+    f.detectChanges();
+    const el: HTMLElement = f.nativeElement;
+    const boxes = () => el.querySelectorAll('.box').length;
+    const total = boxes();
+    expect(total).toBe(data.M.integ.length);
+
+    // fold away every "Used" list: only the not used ones are left
+    const usedHeaders = Array.from(el.querySelectorAll('button.group')).filter(b => b.textContent!.includes('Used ('));
+    usedHeaders.forEach(b => (b as HTMLButtonElement).click());
+    f.detectChanges();
+    expect(boxes()).toBe(data.M.integ.filter(i => i.usedBy.length === 0).length);
+    expect(usedHeaders.every(b => b.getAttribute('aria-expanded') === 'false')).toBeTrue();
+
+    usedHeaders.forEach(b => (b as HTMLButtonElement).click());
+    f.detectChanges();
+    expect(boxes()).toBe(total);
+  });
 });

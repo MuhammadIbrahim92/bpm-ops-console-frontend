@@ -32,18 +32,28 @@ interface Category {
           </div>
         </ng-template>
 
-        <div class="group"><i class="pi pi-check-circle"></i> Used ({{ c.used.length }})</div>
-        @for (i of c.used; track i.id) {
-          <ng-container *ngTemplateOutlet="card; context: { $implicit: i, used: true }" />
-        } @empty {
-          <p class="text-muted-color">No {{ c.title.toLowerCase() }} is used by a step.</p>
+        <button type="button" class="group" (click)="toggle(c.kind, 'used')" [attr.aria-expanded]="!isCollapsed(c.kind, 'used')">
+          <i [class]="'pi ' + (isCollapsed(c.kind, 'used') ? 'pi-chevron-right' : 'pi-chevron-down')"></i>
+          <i class="pi pi-check-circle"></i> Used ({{ c.used.length }})
+        </button>
+        @if (!isCollapsed(c.kind, 'used')) {
+          @for (i of c.used; track i.id) {
+            <ng-container *ngTemplateOutlet="card; context: { $implicit: i, used: true }" />
+          } @empty {
+            <p class="text-muted-color">No {{ c.title.toLowerCase() }} is used by a step.</p>
+          }
         }
 
-        <div class="group mt-4"><i class="pi pi-minus-circle"></i> Not used ({{ c.unused.length }})</div>
-        @for (i of c.unused; track i.id) {
-          <ng-container *ngTemplateOutlet="card; context: { $implicit: i, used: false }" />
-        } @empty {
-          <p class="text-muted-color">Every defined {{ c.title.toLowerCase() }} is used by a step.</p>
+        <button type="button" class="group mt-4" (click)="toggle(c.kind, 'unused')" [attr.aria-expanded]="!isCollapsed(c.kind, 'unused')">
+          <i [class]="'pi ' + (isCollapsed(c.kind, 'unused') ? 'pi-chevron-right' : 'pi-chevron-down')"></i>
+          <i class="pi pi-minus-circle"></i> Not used ({{ c.unused.length }})
+        </button>
+        @if (!isCollapsed(c.kind, 'unused')) {
+          @for (i of c.unused; track i.id) {
+            <ng-container *ngTemplateOutlet="card; context: { $implicit: i, used: false }" />
+          } @empty {
+            <p class="text-muted-color">Every defined {{ c.title.toLowerCase() }} is used by a step.</p>
+          }
         }
       </p-panel>
     } @empty {
@@ -82,8 +92,10 @@ interface Category {
     </ng-template>
   `,
   styles: [`
-    .group { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; margin: 0 0 8px; color: var(--p-text-muted-color, #667085); }
-    .group i { margin-right: 4px; }
+    .group { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; border: 0; background: transparent; cursor: pointer;
+      font: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; margin: 0 0 8px; padding: 4px 0;
+      color: var(--p-text-muted-color, #667085); }
+    .group:hover { color: var(--p-text-color, #1d2330); }
     .box { border: 1px solid var(--p-content-border-color, #d5d9e0); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
     .box.unused { border-style: dashed; opacity: .85; }
     .kv { word-break: break-word; }
@@ -120,6 +132,24 @@ export class XpdlIntegrationsComponent {
       make('other', 'Other applications', 'pi-cog', false)
     ].filter((c): c is Category => c !== null);
   });
+
+  /** Which "Used" and "Not used" lists are folded away, as "kind:used" or "kind:unused". Everything starts open. */
+  private readonly collapsed = signal<ReadonlySet<string>>(new Set());
+
+  isCollapsed(kind: string, part: 'used' | 'unused'): boolean {
+    return this.collapsed().has(kind + ':' + part);
+  }
+
+  toggle(kind: string, part: 'used' | 'unused'): void {
+    const key = kind + ':' + part;
+    const next = new Set(this.collapsed());
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    this.collapsed.set(next);
+  }
 
   techEntries(i: Integration): [string, string][] {
     return Object.entries(i.tech).filter(([, v]) => !!v);
