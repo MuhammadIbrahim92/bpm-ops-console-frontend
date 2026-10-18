@@ -131,6 +131,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
                       <p class="my-2"><app-status-badge [look]="actLook(s.status)" />
                         @if (s.overdue) { <p-tag value="Overdue task" severity="danger" styleClass="ml-2" /> }</p>
                       <dl class="facts col">
+                        <div><dt>{{ s.activityInstanceIds.length === 1 ? 'Activity instance' : 'Activity instances' }}</dt><dd class="mono">{{ s.activityInstanceIds.join(', ') }}</dd></div>
                         <div><dt>Executions</dt><dd>{{ s.executions }} @if (s.failed > 0) { <span class="bad">({{ s.failed }} failed)</span> }</dd></div>
                         <div><dt>First started</dt><dd>{{ s.firstStart | dateTime }}</dd></div>
                         <div><dt>Last finished</dt><dd>{{ s.lastFinish | dateTime }}</dd></div>
@@ -279,6 +280,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
               <span class="font-semibold text-lg">{{ pu.name }}</span>
               @if (pu.type) { <p-tag [value]="pu.type" severity="secondary" /> }
               <span class="mono text-muted-color">{{ pu.activityId }}</span>
+              @if (openStep() !== null) { <p-tag [value]="'Activity instance ' + openStep()" severity="info" /> }
             </div>
           }
         </ng-template>
@@ -319,7 +321,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
             <label class="flex items-center gap-2 mb-3 font-semibold">Execution
               <select class="border border-surface rounded-border p-2 bg-surface-0 dark:bg-surface-900" (change)="pickExecution($event)">
                 @for (e of popupSteps(); track e.activityInstanceId; let ix = $index) {
-                  <option [value]="e.activityInstanceId" [selected]="e.activityInstanceId === openStep()">#{{ ix + 1 }} · {{ e.status }} · {{ (e.start || e.creation) | dateTime }}</option>
+                  <option [value]="e.activityInstanceId" [selected]="e.activityInstanceId === openStep()">#{{ ix + 1 }} · {{ e.activityInstanceId }} · {{ e.status }} · {{ (e.start || e.creation) | dateTime }}</option>
                 }
               </select>
             </label>

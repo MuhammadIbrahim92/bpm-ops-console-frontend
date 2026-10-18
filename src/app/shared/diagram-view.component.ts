@@ -491,7 +491,7 @@ export class DiagramViewComponent implements OnChanges {
       const name = n.name?.trim() || n.activityId;
       const what = kindLabel(n.kind);
       const aria = s
-        ? `${name}${what ? ' (' + what + ')' : ''}: ${look.label}${s.overdue ? ', overdue' : ''}${s.performers.length ? ', with ' + s.performers.join(', ') : ''}`
+        ? `${name}${what ? ' (' + what + ')' : ''}: ${look.label}${s.overdue ? ', overdue' : ''}${s.performers.length ? ', with ' + s.performers.join(', ') : ''}, activity instance ${s.activityInstanceIds.join(', ')}`
         : `${name}${what ? ' (' + what + ')' : ''}: not reached`;
       // icon: centred on events, on top of a diamond's label, in the corner of a task
       let size = 14;

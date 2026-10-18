@@ -102,6 +102,8 @@ export interface ActivityState {
   currentSeconds: number;
   performers: string[];
   overdue: boolean;
+  /** The activity instance id of every execution of the step, oldest first. */
+  activityInstanceIds: number[];
 }
 
 export interface Overlay {
