@@ -70,6 +70,11 @@ export interface DiagramEdge {
   sourceActivityId: string;
   targetActivityId: string;
   points: Point[];
+  /** The transition's name from the XPDL. */
+  name?: string;
+  /** The condition that lets the flow take this arrow; absent when it has none. */
+  condition?: string | null;
+  conditionType?: string | null;
 }
 
 export interface DiagramGraph {

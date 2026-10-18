@@ -198,3 +198,26 @@ export function plainName(name: string): string {
 export function plainCondition(condition: string): string {
   return engine.hcond(condition) as string;
 }
+
+let conditionSim: ReturnType<typeof makeSim> | null = null;
+
+/**
+ * Whether a condition holds for the given attribute values, read and evaluated the way the explorer's simulator does
+ * (null when the text cannot be read). Variables without a value are taken as "null", as the simulator does.
+ */
+export function evaluateCondition(condition: string, values: Record<string, string>): boolean | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sim: any = (conditionSim ??= makeSim({ acts: [], trs: [] }));
+    return !!sim.ev(sim.cp('condition:' + condition, condition, 'expr'), { ...values });
+  } catch {
+    return null;
+  }
+}
+
+/** Names of the variables a condition reads: the [Name] parts. */
+export function conditionVariables(condition: string): string[] {
+  const names = new Set<string>();
+  (condition.match(/\[([^\]]+)\]/g) ?? []).forEach(m => names.add(m.slice(1, -1)));
+  return [...names];
+}

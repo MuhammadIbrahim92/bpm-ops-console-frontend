@@ -1,9 +1,9 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, AttributePage, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -72,6 +72,12 @@ export class ApiService {
   }
 
   /** The instance's tabular data objects, each with its first page of rows. */
+  /** Current values of the named process attributes (the ones that exist). */
+  attributeValues(id: number, names: string[]): Observable<AttributeValue[]> {
+    return this.http.get<AttributeValue[]>(`${this.base}/instances/${id}/attribute-values`,
+      { params: new HttpParams({ fromObject: { names } }) });
+  }
+
   subProcesses(id: number): Observable<SubProcessLink[]> {
     return this.http.get<SubProcessLink[]>(`${this.base}/instances/${id}/sub-processes`);
   }

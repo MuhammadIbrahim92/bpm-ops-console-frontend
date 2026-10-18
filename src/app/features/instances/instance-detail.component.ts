@@ -17,6 +17,7 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
 import { RequestTablesComponent } from '../../shared/request-tables.component';
 import { activityLook, instanceLook, requestLook } from '../../core/status';
 import { EMPTY } from 'rxjs';
+import { conditionVariables, describeCondition, evaluateCondition } from '../process-explorer/xpdl';
 import { SubProcessPanelComponent } from '../../shared/sub-process-panel.component';
 import { TabularTablesComponent } from '../../shared/tabular-tables.component';
 import { DiagramViewComponent } from '../../shared/diagram-view.component';
@@ -91,9 +92,39 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
             }
             @if (d.graph; as g) {
               <div class="split">
-                <app-diagram-view [graph]="g" [overlay]="d.overlay" [children]="subLinks()" [compact]="embedded" [selectedId]="selectedId()" (selected)="onNode($event)" (focused)="selectedId.set($event || undefined)" />
+                <app-diagram-view [graph]="g" [overlay]="d.overlay" [children]="subLinks()" [compact]="embedded" [selectedId]="selectedId()" (selected)="onNode($event)" [selectedEdgeId]="selectedEdgeId()" (edgePicked)="onEdge($event)" (focused)="focusStep($event)" />
                 <aside class="side" aria-live="polite">
-                  @if (selectedNode(); as n) {
+                  @if (edgeInfo(); as ei) {
+                    <div class="font-semibold text-lg">Arrow</div>
+                    <p class="mt-1"><b>{{ ei.from }}</b> <i class="pi pi-arrow-right mx-1"></i> <b>{{ ei.to }}</b></p>
+                    @if (ei.name) { <p class="text-muted-color">Named “{{ ei.name }}”</p> }
+                    <p class="my-2"><p-tag [value]="ei.taken ? 'Travelled' : 'Not travelled'" [severity]="ei.taken ? 'success' : 'secondary'" /></p>
+                    <div class="font-semibold mt-3 mb-1">Condition</div>
+                    @if (ei.condition) {
+                      <code class="cond">{{ ei.condition }}</code>
+                      <p class="text-muted-color mt-1">{{ ei.plain }}</p>
+                      @if (ei.vars.length > 0) {
+                        <div class="font-semibold mt-3 mb-1">Values it reads</div>
+                        @if (edgeValues(); as vals) {
+                          <dl class="facts col">
+                            @for (v of ei.vars; track v) {
+                              <div><dt>{{ v }}</dt><dd>@if (vals[v] !== undefined) { {{ vals[v] }} } @else { <span class="text-muted-color">not set</span> }</dd></div>
+                            }
+                          </dl>
+                          @if (edgeHolds() !== null) {
+                            <p class="mt-2">With these values the condition is <b>{{ edgeHolds() ? 'true' : 'false' }}</b>.</p>
+                          }
+                          <p class="text-muted-color text-sm mt-2">These are the instance's values now. The engine does not keep what they were when this decision was made, so a step that changed them later can make the result differ.</p>
+                        } @else {
+                          <p class="text-muted-color">Loading the values…</p>
+                        }
+                      }
+                    } @else {
+                      <p class="text-muted-color">{{ ei.conditionType === 'OTHERWISE'
+                        ? 'Otherwise: taken when no other arrow leaving the same step has a condition that holds.'
+                        : 'No condition: the flow always takes this arrow.' }}</p>
+                    }
+                  } @else if (selectedNode(); as n) {
                     <div class="font-semibold text-lg">{{ n.name || n.activityId }}</div>
                     <p class="mono text-muted-color">{{ n.activityId }}</p>
                     @if (selectedState(); as s) {
@@ -426,6 +457,42 @@ export class InstanceDetailComponent implements OnInit {
 
   readonly selectedNode = computed<DiagramNode | undefined>(() =>
     this.diagram()?.graph?.nodes.find(n => n.activityId === this.selectedId()));
+  readonly selectedEdgeId = signal<string | undefined>(undefined);
+  /** Current values of the attributes the selected arrow's condition reads; null while they load. */
+  readonly edgeValues = signal<Record<string, string | undefined> | null>(null);
+  readonly edgeInfo = computed(() => {
+    const d = this.diagram();
+    const e = d?.graph?.edges.find(x => x.id === this.selectedEdgeId());
+    if (!d?.graph || !e) {
+      return null;
+    }
+    const nameOf = (id: string) => d.graph!.nodes.find(n => n.activityId === id)?.name?.trim() || id;
+    return {
+      from: nameOf(e.sourceActivityId),
+      to: nameOf(e.targetActivityId),
+      name: e.name ?? '',
+      condition: e.condition ?? null,
+      conditionType: e.conditionType ?? null,
+      plain: e.condition ? describeCondition(e.condition) : '',
+      vars: e.condition ? conditionVariables(e.condition) : [],
+      taken: d.overlay.takenEdges.includes(e.id)
+    };
+  });
+  /** Whether the selected arrow's condition holds for the current values (null when it cannot be worked out). */
+  readonly edgeHolds = computed<boolean | null>(() => {
+    const info = this.edgeInfo();
+    const vals = this.edgeValues();
+    if (!info?.condition || !vals) {
+      return null;
+    }
+    const known: Record<string, string> = {};
+    for (const [k, v] of Object.entries(vals)) {
+      if (v !== undefined) {
+        known[k] = v;
+      }
+    }
+    return evaluateCondition(info.condition, known);
+  });
   readonly selectedState = computed<ActivityState | undefined>(() =>
     this.diagram()?.overlay.activities.find(a => a.activityId === this.selectedId()));
   readonly attention = computed<ActivityState[]>(() =>
@@ -594,7 +661,35 @@ export class InstanceDetailComponent implements OnInit {
   }
 
   /** A click on a diagram node: select it and show its attributes and saved HTML in a popup. */
+  /** A click on an arrow: show its condition and the values it reads. */
+  onEdge(edgeId: string): void {
+    this.selectedEdgeId.set(edgeId);
+    this.selectedId.set(undefined);
+    this.edgeValues.set(null);
+    const edge = this.diagram()?.graph?.edges.find(x => x.id === edgeId);
+    const names = edge?.condition ? conditionVariables(edge.condition) : [];
+    if (names.length === 0) {
+      this.edgeValues.set({});
+      return;
+    }
+    this.api.attributeValues(this.id, names).subscribe({
+      next: list => {
+        if (this.selectedEdgeId() === edgeId) {
+          this.edgeValues.set(Object.fromEntries(list.map(a => [a.name, a.value ?? 'null'])));
+        }
+      },
+      error: () => { if (this.selectedEdgeId() === edgeId) { this.edgeValues.set({}); } }
+    });
+  }
+
+  /** Moving the highlight from the diagram (find, issues, following the run, a click on empty space). */
+  focusStep(activityId: string): void {
+    this.selectedEdgeId.set(undefined);
+    this.selectedId.set(activityId || undefined);
+  }
+
   onNode(activityId: string | undefined): void {
+    this.selectedEdgeId.set(undefined);
     this.openChild.set(null);
     this.selectedId.set(activityId);
     if (!activityId) {
@@ -728,6 +823,7 @@ export class InstanceDetailComponent implements OnInit {
     this.startForm.set(null);
     this.startFormError.set(null);
     this.selectedId.set(undefined);
+    this.selectedEdgeId.set(undefined);
     this.subLinks.set([]);
     this.parent.set(null);
     this.api.parentOf(this.id).subscribe({ next: p => this.parent.set(p), error: () => this.parent.set(null) });

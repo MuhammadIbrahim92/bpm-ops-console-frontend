@@ -70,6 +70,8 @@ interface DrawEdge {
   taken: boolean;
   source: string;
   target: string;
+  /** The arrow has a condition: it carries a marker and can be clicked to see why it was (not) taken. */
+  condition: boolean;
   /** Where the grip sits, and which way dragging it pushes the middle segment. */
   mx: number;
   my: number;
@@ -157,10 +159,17 @@ interface DrawEdge {
         </defs>
         @for (e of edges; track e.id) {
           <g class="dv-eg">
-            <path class="dv-edge" [class.taken]="e.taken" [class.flow]="isFlow(e)" [class.next]="isNextEdge(e)" [class.dim]="dimEdge(e)" [attr.d]="e.d"
+            <path class="dv-edge" [class.sel]="e.id === selectedEdgeId" [class.taken]="e.taken" [class.flow]="isFlow(e)" [class.next]="isNextEdge(e)" [class.dim]="dimEdge(e)" [attr.d]="e.d"
                   [attr.marker-end]="isNextEdge(e) ? 'url(#dv-arrow-next)' : e.taken ? 'url(#dv-arrow-taken)' : 'url(#dv-arrow)'"></path>
-            <path class="dv-eh" [attr.d]="e.d"></path>
+            <path class="dv-eh" [attr.d]="e.d" (click)="pickEdge(e.id, $event)"></path>
             <circle class="dv-bend" [attr.cx]="e.mx" [attr.cy]="e.my" r="5" [attr.data-bend]="e.id" [attr.data-horiz]="e.horiz"><title>Drag to bend this arrow</title></circle>
+            @if (e.condition) {
+              <g class="dv-cond" [class.sel]="e.id === selectedEdgeId" [attr.transform]="'translate(' + e.mx + ' ' + e.my + ')'" [attr.data-bend]="e.id" [attr.data-horiz]="e.horiz"
+                 (click)="pickEdge(e.id, $event)">
+                <title>This arrow has a condition: click to see it</title>
+                <circle r="7.5" /><path d="M0 -3.4v4M0 3.6v.4" />
+              </g>
+            }
           </g>
         }
         @for (d of nodes; track d.n.id) {
@@ -275,7 +284,13 @@ interface DrawEdge {
     .dv-edge.flow { stroke-dasharray: 8 5; animation: dv-flow .9s linear infinite; }
     .dv-edge.next { stroke: var(--accent); stroke-width: 2.2; stroke-dasharray: 3 4; opacity: 1; }
     .dv-edge.dim { opacity: .12; }
-    .dv-eh { fill: none; stroke: transparent; stroke-width: 12; }
+    .dv-eh { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
+    .dv-edge.sel { stroke: var(--accent); stroke-width: 3.4; opacity: 1; }
+    .dv-cond { cursor: pointer; }
+    .dv-cond circle { fill: var(--surface); stroke: var(--muted); stroke-width: 1.4; }
+    .dv-cond path { stroke: var(--muted); stroke-width: 1.9; stroke-linecap: round; fill: none; }
+    .dv-cond:hover circle, .dv-cond.sel circle { stroke: var(--accent); }
+    .dv-cond.sel circle { fill: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
     .dv-bend { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; opacity: 0; cursor: move; transition: opacity .12s; }
     .dv-eg:hover .dv-bend, .dv-bend:hover { opacity: .9; }
     .dv-node { touch-action: none; }
@@ -319,6 +334,9 @@ export class DiagramViewComponent implements OnChanges {
   @Input({ required: true }) graph!: DiagramGraph;
   @Input() overlay?: Overlay;
   @Input() selectedId?: string;
+  /** The arrow whose condition is being looked at. */
+  @Input() selectedEdgeId?: string;
+  @Output() edgePicked = new EventEmitter<string>();
   /** A smaller drawing, for showing inside another window. */
   @Input() compact = false;
   /** The sub-process instances of this instance's sub-process steps: their state is shown on the step. */
@@ -524,7 +542,8 @@ export class DiagramViewComponent implements OnChanges {
         horiz = Math.abs(t.x + t.width / 2 - (s.x + s.width / 2)) >= Math.abs(t.y + t.height / 2 - (s.y + s.height / 2));
       }
       if (d.length > 0) {
-        edges.push({ id: e.id, d, taken: taken.has(e.id), source: e.sourceActivityId, target: e.targetActivityId, mx, my, horiz });
+        edges.push({ id: e.id, d, taken: taken.has(e.id), source: e.sourceActivityId, target: e.targetActivityId,
+          condition: !!e.condition, mx, my, horiz });
       }
     }
     this.edges = edges;
@@ -614,6 +633,14 @@ export class DiagramViewComponent implements OnChanges {
   }
 
   // ---- selection, search, issues, following the run ----
+  pickEdge(id: string, event: Event): void {
+    event.stopPropagation();
+    if (this.suppress) {
+      return;
+    }
+    this.edgePicked.emit(id);
+  }
+
   pick(d: DrawNode): void {
     if (this.suppress) {
       return;
@@ -701,6 +728,10 @@ export class DiagramViewComponent implements OnChanges {
     const target = e.target as Element;
     const bendEl = target.closest('[data-bend]');
     const nodeEl = target.closest('.dv-node');
+    if (target.closest('.dv-eh')) {
+      // a click on an arrow selects it; it must not start a pan (which would take the click away from the arrow)
+      return;
+    }
     if (bendEl || nodeEl) {
       if (bendEl) {
         const id = bendEl.getAttribute('data-bend')!;
