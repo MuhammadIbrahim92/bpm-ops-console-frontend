@@ -34,10 +34,10 @@ describe('StepDefinitionComponent', () => {
     expect(el.textContent).toContain('GET_DAYS_BETWEEN');
     expect(el.textContent).toContain('WFM3');
     expect(el.textContent).toContain('Get_Days_Between');
-    const rows = Array.from(el.querySelectorAll('tbody tr')).map(r => r.textContent!.replace(/\s+/g, ' ').trim());
-    expect(rows[0]).toContain('P_START_DATE Sent VARCHAR2 StartDate');
-    expect(rows[1]).toContain('Returned');
-    expect(rows[2]).toContain('Sent and returned');
+    const rows = Array.from(el.querySelectorAll('tbody tr')).map(r => Array.from(r.querySelectorAll('td')).map(c => c.textContent!.trim()));
+    expect(rows[0]).toEqual(['P_START_DATE', 'Sent', 'VARCHAR2', 'StartDate']);
+    expect(rows[1][1]).toBe('Returned');
+    expect(rows[2][1]).toBe('Sent and returned');
   });
 
   it('shows nothing for a step with neither', () => {
