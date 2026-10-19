@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, AgentAnswer, AgentStatus, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, LogFile, LogHit, LogPage, AgentAnswer, AgentStatus, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -76,6 +76,18 @@ export class ApiService {
   attributeValues(id: number, names: string[]): Observable<AttributeValue[]> {
     return this.http.get<AttributeValue[]>(`${this.base}/instances/${id}/attribute-values`,
       { params: new HttpParams({ fromObject: { names } }) });
+  }
+
+  logFiles(): Observable<{ configured: boolean; files: LogFile[] }> {
+    return this.http.get<{ configured: boolean; files: LogFile[] }>(`${this.base}/logs/files`);
+  }
+
+  logPage(file: string, offset: number, lines: number, direction: 'forward' | 'backward'): Observable<LogPage> {
+    return this.http.get<LogPage>(`${this.base}/logs/page`, { params: toParams({ file, offset, lines, direction }) });
+  }
+
+  logSearch(file: string, text: string, from: number, direction: 'forward' | 'backward', skipCurrent: boolean): Observable<LogHit> {
+    return this.http.get<LogHit>(`${this.base}/logs/search`, { params: toParams({ file, text, from, direction, skipCurrent }) });
   }
 
   agentStatus(): Observable<AgentStatus> {

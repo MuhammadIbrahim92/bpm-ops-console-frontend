@@ -1,6 +1,6 @@
 /** Shapes returned by the backend. Optional fields are omitted by the server when null. */
 
-export type ConsoleFunction = 'VIEW_INSTANCES' | 'VIEW_DIAGRAM' | 'VIEW_ISSUES' | 'VIEW_REQUESTS' | 'RETRY_REQUEST' | 'VIEW_DEFINITIONS' | 'USE_AGENT';
+export type ConsoleFunction = 'VIEW_INSTANCES' | 'VIEW_DIAGRAM' | 'VIEW_ISSUES' | 'VIEW_REQUESTS' | 'RETRY_REQUEST' | 'VIEW_DEFINITIONS' | 'USE_AGENT' | 'VIEW_LOGS';
 
 export interface Me {
   login: string;
@@ -312,6 +312,41 @@ export interface AgentAnswer {
   language: string;
   model: string;
   tools: AgentToolUse[];
+}
+
+/** An engine log file the console may read. */
+export interface LogFile {
+  id: string;
+  name: string;
+  folder: number;
+  sizeBytes: number;
+  modified: string;
+}
+
+export interface LogLine {
+  /** Byte position of the start of the line. */
+  offset: number;
+  text: string;
+  /** Characters cut from the end of a very long line. */
+  cut: number;
+}
+
+export interface LogPage {
+  file: string;
+  size: number;
+  startOffset: number;
+  endOffset: number;
+  lines: LogLine[];
+  hasPrevious: boolean;
+  hasNext: boolean;
+}
+
+export interface LogHit {
+  found: boolean;
+  offset?: number | null;
+  scannedBytes: number;
+  stoppedAt?: number | null;
+  reachedEdge: boolean;
 }
 
 export interface AttributePage {

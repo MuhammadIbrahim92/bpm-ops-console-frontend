@@ -35,6 +35,9 @@ export class AppMenu {
         if (this.auth.can('RETRY_REQUEST')) {
             work.push({ label: 'Bulk retry', icon: 'pi pi-fw pi-replay', routerLink: ['/bulk-retry'] });
         }
+        if (this.auth.can('VIEW_LOGS')) {
+            work.push({ label: 'Engine logs', icon: 'pi pi-fw pi-file', routerLink: ['/logs'] });
+        }
         if (this.auth.can('USE_AGENT')) {
             work.push({ label: 'Assistant', icon: 'pi pi-fw pi-comments', routerLink: ['/assistant'] });
         }

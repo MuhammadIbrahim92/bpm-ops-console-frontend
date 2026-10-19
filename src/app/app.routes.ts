@@ -6,8 +6,6 @@ import { IssueListComponent } from './features/issues/issue-list.component';
 import { ProcessHealthComponent } from './features/processes/process-health.component';
 import { RequestListComponent } from './features/requests/request-list.component';
 import { BulkRetryPageComponent } from './features/bulk/bulk-retry-page.component';
-import { AssistantComponent } from './features/assistant/assistant.component';
-import { ProcessExplorerComponent } from './features/process-explorer/process-explorer.component';
 import { AppLayout } from './layout/component/app.layout';
 import { requireFunction } from './core/auth.guard';
 
@@ -18,8 +16,9 @@ const pages: Routes = [
   { path: 'issues', component: IssueListComponent, title: 'Issues', canActivate: [requireFunction('VIEW_ISSUES')] },
   { path: 'processes', component: ProcessHealthComponent, title: 'Process health', canActivate: [requireFunction('VIEW_ISSUES')] },
   { path: 'bulk-retry', component: BulkRetryPageComponent, title: 'Bulk retry', canActivate: [requireFunction('RETRY_REQUEST')] },
-  { path: 'assistant', component: AssistantComponent, title: 'Assistant', canActivate: [requireFunction('USE_AGENT')] },
-  { path: 'definitions', component: ProcessExplorerComponent, title: 'Process explorer', canActivate: [requireFunction('VIEW_DEFINITIONS')] },
+  { path: 'logs', loadComponent: () => import('./features/logs/engine-logs.component').then(m => m.EngineLogsComponent), title: 'Engine logs', canActivate: [requireFunction('VIEW_LOGS')] },
+  { path: 'assistant', loadComponent: () => import('./features/assistant/assistant.component').then(m => m.AssistantComponent), title: 'Assistant', canActivate: [requireFunction('USE_AGENT')] },
+  { path: 'definitions', loadComponent: () => import('./features/process-explorer/process-explorer.component').then(m => m.ProcessExplorerComponent), title: 'Process explorer', canActivate: [requireFunction('VIEW_DEFINITIONS')] },
   { path: 'requests', component: RequestListComponent, title: 'Request queue', canActivate: [requireFunction('VIEW_REQUESTS')] },
 ];
 
