@@ -3,11 +3,12 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ApiService } from '../../core/api.service';
 import { describeError } from '../../core/errors';
-import { LogFile, LogHit, LogPage } from '../../core/models';
+import { LogFile, LogFileHit, LogHit, LogPage } from '../../core/models';
 import { DateTimePipe } from '../../shared/pipes';
 
 /** Past the end of any file: the server turns it into "the end", which gives the tail. */
@@ -25,7 +26,7 @@ interface Part {
 @Component({
   selector: 'app-engine-logs',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, ButtonModule, MessageModule, SelectModule, ToggleSwitchModule, DateTimePipe],
+  imports: [DecimalPipe, FormsModule, ButtonModule, MessageModule, MultiSelectModule, SelectModule, ToggleSwitchModule, DateTimePipe],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1"><i class="pi pi-file mr-2"></i>Engine logs</div>
@@ -36,6 +37,42 @@ interface Part {
       @if (configured() === false) {
         <p-message severity="info" styleClass="mb-3"
           text="No log folder is configured. Set console.logs.dirs in the settings to the folders that hold the engine logs." />
+      }
+
+      @if (files().length > 1) {
+        <div class="manyfiles mb-4">
+          <div class="font-semibold mb-2"><i class="pi pi-search mr-2"></i>Search in several files</div>
+          <form class="flex flex-wrap items-end gap-2" (ngSubmit)="findMany()">
+            <div class="flex flex-col gap-1" style="min-width:20rem;flex:1 1 20rem">
+              <label for="manyfiles">Files (searched in this order)</label>
+              <p-multiselect inputId="manyfiles" [options]="files()" optionValue="id" optionLabel="name" [ngModel]="manyIds()" (ngModelChange)="manyIds.set($event)" name="manyIds"
+                [filter]="true" filterBy="name" [maxSelectedLabels]="2" selectedItemsLabel="{0} files" placeholder="Choose files" display="comma" fluid appendTo="body" />
+            </div>
+            <input class="p-inputtext" type="text" name="manyTerm" placeholder="Text to find in all of them" [ngModel]="manyTerm()" (ngModelChange)="manyTerm.set($event)" style="min-width:16rem" />
+            <p-button type="submit" icon="pi pi-search" label="Search" size="small" [disabled]="manyBusy() || !manyTerm().trim() || manyIds().length === 0" />
+            <p-button type="button" label="All files" size="small" severity="secondary" [text]="true" (onClick)="manyIds.set(allIds())" />
+          </form>
+          <p class="text-muted-color text-sm mt-2 mb-2">Reads the files from disk only, a limited amount at a time, so the database is not involved. At most 50 files.</p>
+          @if (manyNote()) {
+            <div class="mb-2 flex flex-wrap items-center gap-2">
+              <span class="text-muted-color">{{ manyNote() }}</span>
+              @if (resume() !== null) {
+                <p-button type="button" label="Keep searching" size="small" severity="secondary" [outlined]="true" (onClick)="keepFindingMany()" [disabled]="manyBusy()" />
+              }
+            </div>
+          }
+          @if (manyHits().length > 0) {
+            <div class="hits" role="list" aria-label="Matches in the chosen files">
+              @for (h of manyHits(); track $index) {
+                <button type="button" class="hit" role="listitem" (click)="openHit(h)" [title]="'Open ' + h.name + ' at byte ' + h.offset">
+                  <span class="hfile">{{ h.name }}</span>
+                  <span class="hoff">{{ h.offset | number }}</span>
+                  <span class="htxt">{{ h.text }}@if (h.cut > 0) { <i> … {{ h.cut }} more characters</i> }</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
       }
 
       @if (files().length > 0) {
@@ -119,6 +156,13 @@ interface Part {
     .row.warn .txt { color: var(--c-suspended); }
     .row.trace .txt { color: var(--muted); }
     .row.current { background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
+    .manyfiles { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .hits { border: 1px solid var(--border); border-radius: 8px; max-height: 30vh; overflow: auto; font: 12.5px/1.45 ui-monospace, Menlo, Consolas, monospace; }
+    .hit { display: flex; gap: 12px; width: 100%; text-align: left; padding: 2px 10px; background: transparent; border: 0; cursor: pointer; color: inherit; white-space: pre; }
+    .hit:hover { background: var(--surface-2, rgba(128,128,128,.1)); }
+    .hfile { flex: 0 0 auto; font-weight: 600; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; }
+    .hoff { flex: 0 0 auto; min-width: 9ch; text-align: right; color: var(--muted); font-size: 11px; padding-top: 1px; }
+    .htxt { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
     mark { background: #ffe58a; color: #1d2330; border-radius: 2px; padding: 0 1px; }
   `]
 })
@@ -143,6 +187,18 @@ export class EngineLogsComponent implements OnInit, OnDestroy {
   readonly note = signal<string | null>(null);
   readonly continueFrom = signal<number | null>(null);
   private lastDirection: 'forward' | 'backward' = 'forward';
+
+  // search over several files
+  readonly manyIds = signal<string[]>([]);
+  readonly manyTerm = signal('');
+  readonly manyHits = signal<LogFileHit[]>([]);
+  readonly manyBusy = signal(false);
+  readonly manyNote = signal<string | null>(null);
+  /** Where the last search stopped (the file's place in the chosen list and the byte position), to go on from. */
+  readonly resume = signal<{ file: number; offset: number } | null>(null);
+  private manySearched: string[] = [];
+  private manyText = '';
+  private manyScanned = 0;
 
   readonly percent = computed(() => {
     const p = this.page();
@@ -315,6 +371,72 @@ export class EngineLogsComponent implements OnInit, OnDestroy {
       this.note.set('Searched ' + this.size(h.scannedBytes) + ' without a match. The file is large; the search stops after a limit so the page stays responsive.');
       this.continueFrom.set(h.stoppedAt ?? null);
     }
+  }
+
+  // ---- search in several files
+
+  allIds(): string[] {
+    return this.files().slice(0, 50).map(f => f.id);
+  }
+
+  findMany(): void {
+    this.manySearched = [...this.manyIds()];
+    this.manyText = this.manyTerm().trim();
+    this.manyHits.set([]);
+    this.manyScanned = 0;
+    this.manyNote.set(null);
+    this.resume.set(null);
+    this.runMany(0, 0);
+  }
+
+  keepFindingMany(): void {
+    const r = this.resume();
+    if (r) {
+      this.runMany(r.file, r.offset);
+    }
+  }
+
+  private runMany(startFile: number, from: number): void {
+    if (!this.manyText || this.manySearched.length === 0) {
+      return;
+    }
+    this.manyBusy.set(true);
+    this.api.logFind(this.manySearched, this.manyText, startFile, from, 200).subscribe({
+      next: r => {
+        this.manyBusy.set(false);
+        this.error.set(null);
+        this.manyScanned += r.scannedBytes;
+        this.manyHits.update(h => [...h, ...r.hits]);
+        const n = this.manyHits().length;
+        if (r.done) {
+          this.resume.set(null);
+          this.manyNote.set(n === 0
+            ? 'No match in the ' + this.manySearched.length + ' files (' + this.size(this.manyScanned) + ' read).'
+            : n + ' match' + (n === 1 ? '' : 'es') + ' in ' + this.manySearched.length + ' files (' + this.size(this.manyScanned) + ' read).');
+        } else {
+          this.resume.set({ file: r.resumeFile ?? 0, offset: r.resumeOffset ?? 0 });
+          this.manyNote.set(n + ' match' + (n === 1 ? '' : 'es') + ' so far, ' + this.size(this.manyScanned)
+            + ' read. The search pauses after a limit so the server stays responsive.');
+        }
+      },
+      error: e => {
+        this.manyBusy.set(false);
+        this.error.set(describeError(e));
+      }
+    });
+  }
+
+  /** Shows the file at the matching line, with the line marked, in the viewer below. */
+  openHit(h: LogFileHit): void {
+    this.term.set(this.manyText);
+    if (this.fileId() !== h.file) {
+      this.fileId.set(h.file);
+      this.page.set(null);
+    }
+    this.note.set(null);
+    this.continueFrom.set(null);
+    this.match.set(h.offset);
+    this.go(h.offset, 'forward');
   }
 
   // ---- showing lines

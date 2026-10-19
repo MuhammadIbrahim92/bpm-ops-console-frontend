@@ -349,6 +349,23 @@ export interface LogHit {
   reachedEdge: boolean;
 }
 
+/** A line found by a search over several log files. */
+export interface LogFileHit {
+  file: string;
+  name: string;
+  offset: number;
+  text: string;
+  cut: number;
+}
+
+export interface LogFindResult {
+  hits: LogFileHit[];
+  scannedBytes: number;
+  resumeFile?: number | null;
+  resumeOffset?: number | null;
+  done: boolean;
+}
+
 export interface AttributePage {
   sections: AttributeSection[];
   total: number;

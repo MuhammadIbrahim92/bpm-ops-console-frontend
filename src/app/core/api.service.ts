@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, LogFile, LogHit, LogPage, AgentAnswer, AgentStatus, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, LogFile, LogFindResult, LogHit, LogPage, AgentAnswer, AgentStatus, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -84,6 +84,10 @@ export class ApiService {
 
   logPage(file: string, offset: number, lines: number, direction: 'forward' | 'backward'): Observable<LogPage> {
     return this.http.get<LogPage>(`${this.base}/logs/page`, { params: toParams({ file, offset, lines, direction }) });
+  }
+
+  logFind(files: string[], text: string, startFile: number, from: number, limit: number): Observable<LogFindResult> {
+    return this.http.get<LogFindResult>(`${this.base}/logs/find`, { params: files.reduce((p, f) => p.append('file', f), toParams({ text, startFile, from, limit })) });
   }
 
   logSearch(file: string, text: string, from: number, direction: 'forward' | 'backward', skipCurrent: boolean): Observable<LogHit> {

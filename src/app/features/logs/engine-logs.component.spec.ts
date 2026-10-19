@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, of } from 'rxjs';
 import { ApiService } from '../../core/api.service';
-import { LogFile, LogHit, LogPage } from '../../core/models';
+import { LogFile, LogFindResult, LogHit, LogPage } from '../../core/models';
 import { EngineLogsComponent } from './engine-logs.component';
 
 const FILE: LogFile = { id: '0/engine.log', name: 'engine.log', folder: 0, sizeBytes: 4_500_000_000, modified: '2026-10-19T10:00:00' };
@@ -15,10 +15,13 @@ describe('EngineLogsComponent', () => {
   let pages: { offset: number; lines: number; direction: string }[];
   let searches: { text: string; from: number; direction: string; skip: boolean }[];
   let hit: LogHit;
+  let finds: { files: string[]; text: string; startFile: number; from: number }[];
+  let found: LogFindResult;
 
   function build(configured = true, files: LogFile[] = [FILE]) {
     pages = [];
     searches = [];
+    finds = [];
     TestBed.configureTestingModule({
       providers: [{
         provide: ApiService,
@@ -29,6 +32,10 @@ describe('EngineLogsComponent', () => {
             return of(direction === 'backward' && offset > 4_000_000_000
               ? page(4_499_999_000, FILE.sizeBytes, true, false, ['2026-10-19 ERROR boom', '\tat com.bpm.Engine.run(Engine.java:5)', 'last line'])
               : page(offset, offset + 30, offset > 0, true, ['a line', 'another line']));
+          },
+          logFind: (files: string[], text: string, startFile: number, from: number): Observable<LogFindResult> => {
+            finds.push({ files, text, startFile, from });
+            return of(found);
           },
           logSearch: (_f: string, text: string, from: number, direction: string, skip: boolean): Observable<LogHit> => {
             searches.push({ text, from, direction, skip });
@@ -42,7 +49,10 @@ describe('EngineLogsComponent', () => {
     return f;
   }
 
-  beforeEach(() => { hit = { found: true, offset: 123_456, scannedBytes: 1000, reachedEdge: false }; });
+  beforeEach(() => {
+    found = { hits: [], scannedBytes: 0, done: true };
+    hit = { found: true, offset: 123_456, scannedBytes: 1000, reachedEdge: false };
+  });
 
   it('says so when no log folder is configured', () => {
     const f = build(false, []);
@@ -114,5 +124,30 @@ describe('EngineLogsComponent', () => {
     const parts = f.componentInstance.parts('2026 error and ERROR again');
     expect(parts.filter(p => p.hit).length).toBe(2);
     expect(parts.map(p => p.text).join('')).toBe('2026 error and ERROR again');
+  });
+  it('searches several files at once, lists the matches with their file, and goes on where it stopped', () => {
+    const other: LogFile = { ...FILE, id: '0/engine.log.1', name: 'engine.log.1' };
+    const f = build(true, [FILE, other]);
+    found = {
+      hits: [{ file: other.id, name: other.name, offset: 500, text: 'ERROR 277939916', cut: 0 }],
+      scannedBytes: 2048, resumeFile: 1, resumeOffset: 9000, done: false
+    };
+    f.componentInstance.manyIds.set([FILE.id, other.id]);
+    f.componentInstance.manyTerm.set('277939916');
+    f.componentInstance.findMany();
+    expect(finds[0]).toEqual({ files: [FILE.id, other.id], text: '277939916', startFile: 0, from: 0 });
+    expect(f.componentInstance.manyHits().length).toBe(1);
+    expect(f.componentInstance.resume()).toEqual({ file: 1, offset: 9000 });
+    found = { hits: [{ file: other.id, name: other.name, offset: 9100, text: 'again', cut: 0 }], scannedBytes: 10, done: true };
+    f.componentInstance.keepFindingMany();
+    expect(finds[1].startFile).toBe(1);
+    expect(finds[1].from).toBe(9000);
+    expect(f.componentInstance.manyHits().length).toBe(2);
+    expect(f.componentInstance.resume()).toBeNull();
+    // choosing a match shows that file at that line
+    f.componentInstance.openHit(f.componentInstance.manyHits()[0]);
+    expect(f.componentInstance.fileId()).toBe(other.id);
+    expect(pages[pages.length - 1]).toEqual({ offset: 500, lines: 200, direction: 'forward' });
+    expect(f.componentInstance.match()).toBe(500);
   });
 });
