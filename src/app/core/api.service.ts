@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, AgentAnswer, AgentStatus, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -76,6 +76,29 @@ export class ApiService {
   attributeValues(id: number, names: string[]): Observable<AttributeValue[]> {
     return this.http.get<AttributeValue[]>(`${this.base}/instances/${id}/attribute-values`,
       { params: new HttpParams({ fromObject: { names } }) });
+  }
+
+  agentStatus(): Observable<AgentStatus> {
+    return this.http.get<AgentStatus>(`${this.base}/agent/status`);
+  }
+
+  agentAsk(body: {
+    question: string; language: string; history?: { role: string; content: string }[];
+    context?: { instanceId: number; activityId?: string };
+  }): Observable<AgentAnswer> {
+    return this.http.post<AgentAnswer>(`${this.base}/agent/ask`, body);
+  }
+
+  agentFeedback(body: { question: string; answer: string; rating: string; note?: string; language?: string; tools?: string[] }): Observable<void> {
+    return this.http.post<void>(`${this.base}/agent/feedback`, body);
+  }
+
+  agentDigest(): Observable<{ date?: string; text?: string }> {
+    return this.http.get<{ date?: string; text?: string }>(`${this.base}/agent/digest`);
+  }
+
+  agentMakeDigest(language: string): Observable<{ date?: string; text?: string }> {
+    return this.http.post<{ date?: string; text?: string }>(`${this.base}/agent/digest`, { language });
   }
 
   subProcesses(id: number): Observable<SubProcessLink[]> {

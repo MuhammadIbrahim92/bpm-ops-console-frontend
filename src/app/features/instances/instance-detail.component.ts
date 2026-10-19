@@ -47,6 +47,11 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
         <div class="flex flex-wrap justify-between gap-4">
           <div>
             <div class="font-semibold text-2xl">{{ i.name || 'Instance ' + i.id }}</div>
+            @if (auth.can('USE_AGENT') && !embedded) {
+              <a class="p-button p-button-sm p-button-outlined mt-2" style="display:inline-flex;align-items:center;text-decoration:none"
+                 [routerLink]="['/assistant']" [queryParams]="{ instance: i.id, step: selectedId() || null }" target="_blank">
+                <i class="pi pi-comments mr-2"></i>Ask the assistant</a>
+            }
             <p class="text-muted-color mt-1">#{{ i.id }} &middot; {{ i.processName }} <span class="mono">v{{ i.version }}</span> @if (i.test) { &middot; test instance }</p>
           </div>
           <dl class="facts">

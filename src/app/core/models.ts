@@ -1,6 +1,6 @@
 /** Shapes returned by the backend. Optional fields are omitted by the server when null. */
 
-export type ConsoleFunction = 'VIEW_INSTANCES' | 'VIEW_DIAGRAM' | 'VIEW_ISSUES' | 'VIEW_REQUESTS' | 'RETRY_REQUEST' | 'VIEW_DEFINITIONS';
+export type ConsoleFunction = 'VIEW_INSTANCES' | 'VIEW_DIAGRAM' | 'VIEW_ISSUES' | 'VIEW_REQUESTS' | 'RETRY_REQUEST' | 'VIEW_DEFINITIONS' | 'USE_AGENT';
 
 export interface Me {
   login: string;
@@ -292,6 +292,26 @@ export interface ParentRef {
   activityName?: string | null;
   available: boolean;
   parentName?: string | null;
+}
+
+/** Whether the assistant is switched on and what it can reach. */
+export interface AgentStatus {
+  ready: boolean;
+  model?: string | null;
+  languages: string[];
+  logsConfigured: boolean;
+}
+
+export interface AgentToolUse {
+  name: string;
+  arguments: string;
+}
+
+export interface AgentAnswer {
+  answer: string;
+  language: string;
+  model: string;
+  tools: AgentToolUse[];
 }
 
 export interface AttributePage {
