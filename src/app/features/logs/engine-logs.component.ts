@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { MultiSelectModule } from 'primeng/multiselect';
@@ -168,6 +169,7 @@ interface Part {
 })
 export class EngineLogsComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly pageSizes = [100, 200, 500, 1000];
 
@@ -217,7 +219,16 @@ export class EngineLogsComponent implements OnInit, OnDestroy {
         this.configured.set(r.configured);
         this.files.set(r.files);
         this.loading.set(false);
-        if (r.files.length > 0) {
+        const q = this.route.snapshot.queryParamMap;
+        const wanted = q.get('file');
+        const at = Number(q.get('offset'));
+        if (wanted && r.files.some(f => f.id === wanted)) {
+          // opened from a link (a step's request UUID): show that file at the line, with the text marked
+          this.term.set(q.get('text') ?? '');
+          this.fileId.set(wanted);
+          this.match.set(Number.isFinite(at) && q.get('offset') !== null ? at : null);
+          this.go(this.match() ?? END, this.match() !== null ? 'forward' : 'backward');
+        } else if (r.files.length > 0) {
           this.choose(r.files[0].id);
         }
       },

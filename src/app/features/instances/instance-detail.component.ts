@@ -8,6 +8,7 @@ import { TabsModule } from 'primeng/tabs';
 import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { UuidLogsComponent } from '../../shared/uuid-logs.component';
 import { describeError } from '../../core/errors';
 import { ActivityState, AttributePage, ParentRef, SubProcessLink, TabularTable, DiagramNode, InstanceDiagram, InstanceSummary, RequestRow, StartForm, StepRow, TimerRequestRow, WorkItemHtml } from '../../core/models';
 import { kindLabel } from '../../core/diagram-geometry';
@@ -32,7 +33,7 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
 @Component({
   selector: 'app-instance-detail',
   standalone: true,
-  imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, TabularTablesComponent, SubProcessPanelComponent, StepDefinitionComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
+  imports: [TableToolsComponent, ButtonModule, DialogModule, MessageModule, TableModule, TabsModule, TagModule, RequestTablesComponent, PagerComponent, AttributeSectionsComponent, TabularTablesComponent, SubProcessPanelComponent, StepDefinitionComponent, UuidLogsComponent, SavedHtmlComponent, RouterLink, DiagramViewComponent, StatusBadgeComponent, DateTimePipe, AgePipe, DurationPipe],
   template: `
     @if (!embedded) {
       <div class="mb-4">
@@ -323,7 +324,11 @@ type Tab = 'diagram' | 'steps' | 'attributes' | 'requests';
             <div class="font-semibold mb-2 mt-3">Request UUID</div>
             <ul class="plain mono mb-3">
               @for (e of popupSteps(); track e.activityInstanceId; let ix = $index) {
-                <li>@if (popupSteps().length > 1) { <span class="text-muted-color">#{{ ix + 1 }} </span> }{{ e.requestUuid || '-' }}</li>
+                <li class="mb-2">@if (popupSteps().length > 1) { <span class="text-muted-color">#{{ ix + 1 }} </span> }{{ e.requestUuid || '-' }}
+                  @if (e.requestUuid && auth.can('VIEW_LOGS')) {
+                    <div class="mt-1"><app-uuid-logs [uuid]="e.requestUuid" [since]="e.start || e.creation" /></div>
+                  }
+                </li>
               }
             </ul>
           }

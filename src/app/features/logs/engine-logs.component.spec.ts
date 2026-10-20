@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { LogFile, LogFindResult, LogHit, LogPage } from '../../core/models';
@@ -23,7 +24,7 @@ describe('EngineLogsComponent', () => {
     searches = [];
     finds = [];
     TestBed.configureTestingModule({
-      providers: [{
+      providers: [provideRouter([]), {
         provide: ApiService,
         useValue: {
           logFiles: () => of({ configured, files }),
