@@ -42,6 +42,10 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
             optionLabel="name" optionValue="id" placeholder="All processes" [showClear]="true" [filter]="true" fluid />
         </div>
         <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
+          <label for="workOrderId">Work order ID</label>
+          <input pInputText id="workOrderId" name="workOrderId" [(ngModel)]="f.workOrderId" placeholder="exact value" fluid />
+        </div>
+        <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
           <label for="createdBy">Created by</label>
           <input pInputText id="createdBy" name="createdBy" [(ngModel)]="f.createdBy" placeholder="login" fluid />
         </div>
@@ -164,6 +168,7 @@ export class InstanceListComponent implements OnInit {
     this.route.queryParamMap.subscribe(q => {
       this.f = {
         text: q.get('text') ?? '',
+        workOrderId: q.get('workOrderId') ?? '',
         status: q.get('status') ?? '',
         processId: q.get('processId') ? Number(q.get('processId')) : null,
         createdBy: q.get('createdBy') ?? '',
@@ -217,6 +222,7 @@ export class InstanceListComponent implements OnInit {
     this.router.navigate([], {
       queryParams: {
         text: f.text || null,
+        workOrderId: f.workOrderId || null,
         status: f.status || null,
         processId: f.processId,
         createdBy: f.createdBy || null,
@@ -235,7 +241,7 @@ export class InstanceListComponent implements OnInit {
   private load(): void {
     const f = this.f;
     const q: InstanceQuery = {
-      text: f.text, status: f.status, processId: f.processId, createdBy: f.createdBy, from: f.from, to: f.to,
+      text: f.text, workOrderId: f.workOrderId, status: f.status, processId: f.processId, createdBy: f.createdBy, from: f.from, to: f.to,
       olderThanHours: f.olderThanHours, includeTest: f.includeTest, page: this.page(), size: this.size(),
       sort: this.sortField() ?? undefined, dir: this.sortOrder() < 0 ? 'desc' : 'asc'
     };
@@ -249,7 +255,7 @@ export class InstanceListComponent implements OnInit {
 
   private blank() {
     return {
-      text: '', status: '', processId: null as number | null, createdBy: '', from: '', to: '',
+      text: '', workOrderId: '', status: '', processId: null as number | null, createdBy: '', from: '', to: '',
       olderThanHours: null as number | null, includeTest: false
     };
   }

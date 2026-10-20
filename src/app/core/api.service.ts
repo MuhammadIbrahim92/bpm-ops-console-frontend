@@ -10,6 +10,7 @@ export interface InstanceQuery {
   status?: string;
   processId?: number | null;
   text?: string;
+  workOrderId?: string;
   from?: string;
   to?: string;
   olderThanHours?: number | null;
