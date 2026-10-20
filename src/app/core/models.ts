@@ -229,6 +229,8 @@ export interface ApiError {
 }
 
 export interface AttributeValue {
+  /** The attribute's id (ATT_ID), when known. */
+  id?: string | null;
   name: string;
   type?: string;
   value?: string;

@@ -43,6 +43,7 @@ import { downloadCsv } from './csv';
           columnResizeMode="expand" [paginator]="s.attributes.length > 25" [rows]="25">
           <ng-template #header>
             <tr>
+              <th pSortableColumn="id" pResizableColumn>ID <p-sortIcon field="id" /><p-columnFilter type="text" field="id" display="menu" /></th>
               <th pSortableColumn="name" pResizableColumn>Attribute <p-sortIcon field="name" /><p-columnFilter type="text" field="name" display="menu" /></th>
               <th pSortableColumn="type" pResizableColumn>Type <p-sortIcon field="type" /><p-columnFilter type="text" field="type" display="menu" /></th>
               <th pSortableColumn="value" pResizableColumn>Value <p-sortIcon field="value" /><p-columnFilter type="text" field="value" display="menu" /></th>
@@ -50,12 +51,13 @@ import { downloadCsv } from './csv';
           </ng-template>
           <ng-template #body let-a>
             <tr>
+              <td class="mono text-muted-color">{{ a.id ?? '' }}</td>
               <td>{{ a.name }} @if (a.tabular) { <span class="text-muted-color">(table)</span> }</td>
               <td class="text-muted-color">{{ a.type }}</td>
               <td class="val">{{ a.value }}@if (a.value1) { <span class="text-muted-color"> / {{ a.value1 }}</span> }</td>
             </tr>
           </ng-template>
-          <ng-template #emptymessage><tr><td colspan="3">No attribute matches.</td></tr></ng-template>
+          <ng-template #emptymessage><tr><td colspan="4">No attribute matches.</td></tr></ng-template>
         </p-table>
       </p-panel>
     } @empty {
@@ -91,16 +93,16 @@ export class AttributeSectionsComponent {
       .map(s => ({
         ...s,
         attributes: s.attributes.filter(a =>
-          [a.name, a.type, a.value, a.value1, s.doName].some(v => (v ?? '').toLowerCase().includes(q)))
+          [a.id, a.name, a.type, a.value, a.value1, s.doName].some(v => (v ?? '').toLowerCase().includes(q)))
       }))
       .filter(s => s.attributes.length > 0);
   });
 
   export(): void {
     const rows = this.visibleSections().flatMap(s =>
-      s.attributes.map(a => ({ doId: s.doId, doName: s.doName, name: a.name, type: a.type, value: a.value, value1: a.value1 })));
+      s.attributes.map(a => ({ doId: s.doId, doName: s.doName, attId: a.id, name: a.name, type: a.type, value: a.value, value1: a.value1 })));
     downloadCsv(this.exportName, [
-      { field: 'doId', header: 'DO_ID' }, { field: 'doName', header: 'Data object' }, { field: 'name', header: 'Attribute' },
+      { field: 'doId', header: 'DO_ID' }, { field: 'doName', header: 'Data object' }, { field: 'attId', header: 'ATT_ID' }, { field: 'name', header: 'Attribute' },
       { field: 'type', header: 'Type' }, { field: 'value', header: 'Value' }, { field: 'value1', header: 'Value 1' }
     ], rows);
   }
