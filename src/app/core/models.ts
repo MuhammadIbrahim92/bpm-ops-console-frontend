@@ -411,6 +411,8 @@ export interface WorkOrderAttribute {
   mandatory: boolean;
   readOnly: boolean;
   bpmAttId?: number | null;
+  /** The name of the BPM attribute behind bpmAttId, when known. */
+  bpmAttName?: string | null;
   returnsToOm: boolean;
   returnsToVc4: boolean;
   vc4AttCode?: string | null;

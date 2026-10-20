@@ -66,7 +66,7 @@ import { downloadCsv } from '../../shared/csv';
                   <th pSortableColumn="name" pResizableColumn>Attribute <p-sortIcon field="name" /></th>
                   <th pSortableColumn="present" pResizableColumn>On the order <p-sortIcon field="present" /></th>
                   <th pSortableColumn="value" pResizableColumn>Value <p-sortIcon field="value" /></th>
-                  <th pSortableColumn="bpmAttId" pResizableColumn>BPM att id <p-sortIcon field="bpmAttId" /></th>
+                  <th pSortableColumn="bpmAttId" pResizableColumn>BPM attribute <p-sortIcon field="bpmAttId" /></th>
                   <th pResizableColumn>Returned to</th>
                 </tr>
               </ng-template>
@@ -82,7 +82,7 @@ import { downloadCsv } from '../../shared/csv';
                     @if (a.present) { <p-tag value="Yes" severity="success" /> } @else { <p-tag value="No" severity="secondary" /> }
                   </td>
                   <td class="val">@if (a.value) { {{ a.value }} } @else if (a.present) { <span class="text-muted-color">(empty)</span> } @else { <span class="text-muted-color">—</span> }</td>
-                  <td class="mono">{{ a.bpmAttId ?? '' }}</td>
+                  <td>@if (a.bpmAttId) { <span class="mono">{{ a.bpmAttId }}</span> @if (a.bpmAttName) { <div class="text-sm">{{ a.bpmAttName }}</div> } }</td>
                   <td class="nowrap">
                     @if (a.returnsToOm) { <p-tag value="OM" severity="info" styleClass="mr-1" /> }
                     @if (a.returnsToVc4) { <p-tag value="VC4" severity="warn" [title]="a.vc4AttCode ? 'VC4 code ' + a.vc4AttCode : 'Returned to VC4'" /> }
@@ -155,7 +155,7 @@ export class WorkOrderAttributesDialogComponent {
         ...s,
         attributes: s.attributes.filter(a =>
           (!missing || !a.present) && (!returned || a.returnsToOm || a.returnsToVc4) &&
-          (q === '' || [String(a.attId), a.name, a.label, a.labelAr, a.code, a.value, s.nameEn, s.nameAr, a.bpmAttId == null ? '' : String(a.bpmAttId)]
+          (q === '' || [String(a.attId), a.name, a.label, a.labelAr, a.code, a.value, s.nameEn, s.nameAr, a.bpmAttId == null ? '' : String(a.bpmAttId), a.bpmAttName]
             .some(v => (v ?? '').toLowerCase().includes(q))))
       }))
       .filter(s => !filtering || s.attributes.length > 0);
@@ -172,13 +172,13 @@ export class WorkOrderAttributesDialogComponent {
     }
     const rows = this.visibleSections().flatMap(s => s.attributes.map(a => ({
       sectionId: s.sectionId, section: s.nameEn, attId: a.attId, name: a.name, label: a.label,
-      onOrder: a.present ? 'Yes' : 'No', value: a.value, bpmAttId: a.bpmAttId,
+      onOrder: a.present ? 'Yes' : 'No', value: a.value, bpmAttId: a.bpmAttId, bpmAttName: a.bpmAttName,
       om: a.returnsToOm ? 'Yes' : 'No', vc4: a.returnsToVc4 ? 'Yes' : 'No', vc4Code: a.vc4AttCode
     })));
     downloadCsv('work-order-' + d.workOrderId + '-attributes', [
       { field: 'sectionId', header: 'Section id' }, { field: 'section', header: 'Section' }, { field: 'attId', header: 'Att id' },
       { field: 'name', header: 'Attribute' }, { field: 'label', header: 'Label' }, { field: 'onOrder', header: 'On the order' },
-      { field: 'value', header: 'Value' }, { field: 'bpmAttId', header: 'BPM att id' }, { field: 'om', header: 'Returned to OM' },
+      { field: 'value', header: 'Value' }, { field: 'bpmAttId', header: 'BPM att id' }, { field: 'bpmAttName', header: 'BPM attribute name' }, { field: 'om', header: 'Returned to OM' },
       { field: 'vc4', header: 'Returned to VC4' }, { field: 'vc4Code', header: 'VC4 code' }
     ], rows);
   }
