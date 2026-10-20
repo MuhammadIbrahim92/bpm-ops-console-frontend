@@ -161,6 +161,8 @@ export interface Issue {
 
 export interface ActivityStat {
   activityId: string;
+  /** The step's name from the process definition, when it could be read. */
+  name?: string | null;
   executions: number;
   running: number;
   failed: number;

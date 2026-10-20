@@ -60,7 +60,7 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
           (searchChange)="dt.filterGlobal($event, 'contains')" (exportCsv)="export(dt)" (clear)="clearAll(dt)" />
         <p-table #dt [value]="stats()" [loading]="loading()" [paginator]="stats().length > 25" [rows]="25" [rowHover]="true"
           [stripedRows]="true" [resizableColumns]="true" columnResizeMode="expand" [scrollable]="true"
-          [rowsPerPageOptions]="[25, 50, 100]" [globalFilterFields]="['activityId']"
+          [rowsPerPageOptions]="[25, 50, 100]" [globalFilterFields]="['activityId', 'name']"
           [sortField]="'avgSeconds'" [sortOrder]="-1" [tableStyle]="{ 'min-width': '60rem' }">
           <ng-template #header>
             <tr>
@@ -75,7 +75,7 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
           </ng-template>
           <ng-template #body let-s>
             <tr>
-              @if (col('activityId')) { <td class="mono">{{ s.activityId }}</td> }
+              @if (col('activityId')) { <td>@if (s.name && s.name !== s.activityId) { <span>{{ s.name }}</span> <span class="mono text-muted-color">({{ s.activityId }})</span> } @else { <span class="mono">{{ s.activityId }}</span> }</td> }
               @if (col('executions')) { <td class="text-right">{{ s.executions }}</td> }
               @if (col('running')) { <td class="text-right">{{ s.running }}</td> }
               @if (col('failed')) { <td class="text-right">@if (s.failed > 0) { <strong class="bad">{{ s.failed }}</strong> } @else { 0 }</td> }
@@ -138,7 +138,7 @@ export class ProcessHealthComponent implements OnInit {
   export(dt: Table): void {
     const rows = (dt.filteredValue ?? this.stats()) as ActivityStat[];
     downloadCsv('process-health', [
-      { field: 'activityId', header: 'Step' }, { field: 'executions', header: 'Runs' },
+      { field: 'activityId', header: 'Step id' }, { field: 'name', header: 'Step name' }, { field: 'executions', header: 'Runs' },
       { field: 'running', header: 'Running now' }, { field: 'failed', header: 'Failed' },
       { field: 'avgSeconds', header: 'Average seconds' }, { field: 'maxSeconds', header: 'Slowest seconds' },
       { field: 'longestRunningSeconds', header: 'Longest wait now (seconds)' }
