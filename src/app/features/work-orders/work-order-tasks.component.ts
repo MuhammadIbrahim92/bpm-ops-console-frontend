@@ -9,6 +9,7 @@ import { TableModule, TablePageEvent } from 'primeng/table';
 import { ApiService, WorkOrderQuery } from '../../core/api.service';
 import { describeError } from '../../core/errors';
 import { WorkOrderTask } from '../../core/models';
+import { WorkOrderAttributesDialogComponent } from './work-order-attributes-dialog.component';
 import { downloadCsv } from '../../shared/csv';
 import { DateTimePipe } from '../../shared/pipes';
 import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.component';
@@ -21,7 +22,7 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
   selector: 'app-work-order-tasks',
   standalone: true,
   imports: [FormsModule, RouterLink, ButtonModule, InputTextModule, MessageModule, SelectModule, TableModule,
-    TableToolsComponent, DateTimePipe],
+    TableToolsComponent, DateTimePipe, WorkOrderAttributesDialogComponent],
   template: `
     <div class="card">
       <div class="font-semibold text-xl mb-1"><i class="pi pi-briefcase mr-2"></i>Work order tasks</div>
@@ -98,6 +99,7 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
             @if (show('instanceId')) { <th pSortableColumn="instanceId" pResizableColumn>Instance <p-sortIcon field="instanceId" /></th> }
             @if (show('relatedInstance')) { <th pSortableColumn="relatedInstance" pResizableColumn>Related instance <p-sortIcon field="relatedInstance" /></th> }
             @if (show('relatedTask')) { <th pResizableColumn>Related task</th> }
+            <th style="width:5rem">Attributes</th>
           </tr>
         </ng-template>
         <ng-template #body let-r>
@@ -127,13 +129,19 @@ import { TableToolsComponent, ToolColumn } from '../../shared/table-tools.compon
               </td>
             }
             @if (show('relatedTask')) { <td class="mono">{{ r.relatedTask }}</td> }
+            <td class="text-center">
+              <p-button type="button" icon="pi pi-list" size="small" severity="secondary" [text]="true" (onClick)="attributesOf.set(r.workOrderId)"
+                [ariaLabel]="'Additional attributes of work order ' + r.workOrderId" [title]="'Additional attributes of work order ' + r.workOrderId" />
+            </td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>
-          <tr><td [attr.colspan]="visible().length || 1">No work order task matches.</td></tr>
+          <tr><td [attr.colspan]="(visible().length || 1) + 1">No work order task matches.</td></tr>
         </ng-template>
       </p-table>
     </div>
+
+    <app-work-order-attributes-dialog [workOrderId]="attributesOf()" (closed)="attributesOf.set(null)" />
   `
 })
 export class WorkOrderTasksComponent implements OnInit {
@@ -163,6 +171,8 @@ export class WorkOrderTasksComponent implements OnInit {
   );
 
   readonly size = signal(50);
+  /** The work order whose additional attributes are open in the dialog. */
+  readonly attributesOf = signal<string | null>(null);
   readonly items = signal<WorkOrderTask[]>([]);
   readonly total = signal(0);
   readonly page = signal(0);

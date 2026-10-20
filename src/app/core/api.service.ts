@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, LogFile, LogFindResult, WorkOrderTask, LogHit, LogPage, AgentAnswer, AgentStatus, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, LogFile, LogFindResult, WorkOrderAttributes, WorkOrderTask, LogHit, LogPage, AgentAnswer, AgentStatus, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -97,6 +97,10 @@ export class ApiService {
 
   workOrderTasks(q: WorkOrderQuery): Observable<Page<WorkOrderTask>> {
     return this.http.get<Page<WorkOrderTask>>(`${this.base}/work-orders/tasks`, { params: toParams({ ...q }) });
+  }
+
+  workOrderAttributes(workOrderId: string): Observable<WorkOrderAttributes> {
+    return this.http.get<WorkOrderAttributes>(`${this.base}/work-orders/${encodeURIComponent(workOrderId)}/attributes`);
   }
 
   workOrderOptions(): Observable<{ workOrderStatuses: string[]; taskStatuses: string[] }> {

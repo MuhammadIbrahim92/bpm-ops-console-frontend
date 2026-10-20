@@ -400,6 +400,44 @@ export interface WorkOrderTask {
   relatedKnown: boolean;
 }
 
+/** One attribute of a work order's request type, with the value the work order holds (if any). */
+export interface WorkOrderAttribute {
+  attId: number;
+  name: string;
+  label?: string | null;
+  labelAr?: string | null;
+  code?: string | null;
+  type?: string | null;
+  mandatory: boolean;
+  readOnly: boolean;
+  bpmAttId?: number | null;
+  returnsToOm: boolean;
+  returnsToVc4: boolean;
+  vc4AttCode?: string | null;
+  /** The work order has a row for it in WF_WO_ADDITIONAL_ATTRIBUTE. */
+  present: boolean;
+  value?: string | null;
+  /** False for a stored value whose attribute the request type does not define. */
+  defined: boolean;
+}
+
+export interface WorkOrderSection {
+  sectionId: number;
+  nameEn?: string | null;
+  nameAr?: string | null;
+  code?: string | null;
+  type?: string | null;
+  requestType?: string | null;
+  attributes: WorkOrderAttribute[];
+  present: number;
+}
+
+export interface WorkOrderAttributes {
+  workOrderId: string;
+  requestType?: string | null;
+  sections: WorkOrderSection[];
+}
+
 export interface AttributePage {
   sections: AttributeSection[];
   total: number;
