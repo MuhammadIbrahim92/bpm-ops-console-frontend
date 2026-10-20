@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toParams } from './http-params';
 import {
-  ActivityStat, LogFile, LogFindResult, LogHit, LogPage, AgentAnswer, AgentStatus, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
+  ActivityStat, LogFile, LogFindResult, WorkOrderTask, LogHit, LogPage, AgentAnswer, AgentStatus, AttributePage, AttributeValue, ParentRef, SubProcessLink, TabularTable, DefinitionProcess, DefinitionSource, DefinitionVersion, BulkImport, BulkResult, BulkTarget, StartForm, StepRow, TimerRequestRow, WorkItemHtml, InstanceDiagram, InstanceSummary, Issue, IssueType, Lookups, Me, Page, RequestRow
 } from './models';
 
 export interface InstanceQuery {
@@ -16,6 +16,22 @@ export interface InstanceQuery {
   olderThanHours?: number | null;
   includeTest?: boolean;
   createdBy?: string;
+  sort?: string;
+  dir?: 'asc' | 'desc';
+  page?: number;
+  size?: number;
+}
+
+export interface WorkOrderQuery {
+  workOrderId?: string;
+  instanceId?: number | null;
+  woStatus?: string;
+  taskStatus?: string;
+  workSpec?: string;
+  requestType?: string;
+  owner?: string;
+  from?: string;
+  to?: string;
   sort?: string;
   dir?: 'asc' | 'desc';
   page?: number;
@@ -77,6 +93,14 @@ export class ApiService {
   attributeValues(id: number, names: string[]): Observable<AttributeValue[]> {
     return this.http.get<AttributeValue[]>(`${this.base}/instances/${id}/attribute-values`,
       { params: new HttpParams({ fromObject: { names } }) });
+  }
+
+  workOrderTasks(q: WorkOrderQuery): Observable<Page<WorkOrderTask>> {
+    return this.http.get<Page<WorkOrderTask>>(`${this.base}/work-orders/tasks`, { params: toParams({ ...q }) });
+  }
+
+  workOrderOptions(): Observable<{ workOrderStatuses: string[]; taskStatuses: string[] }> {
+    return this.http.get<{ workOrderStatuses: string[]; taskStatuses: string[] }>(`${this.base}/work-orders/options`);
   }
 
   logFiles(): Observable<{ configured: boolean; files: LogFile[] }> {

@@ -1,6 +1,6 @@
 /** Shapes returned by the backend. Optional fields are omitted by the server when null. */
 
-export type ConsoleFunction = 'VIEW_INSTANCES' | 'VIEW_DIAGRAM' | 'VIEW_ISSUES' | 'VIEW_REQUESTS' | 'RETRY_REQUEST' | 'VIEW_DEFINITIONS' | 'USE_AGENT' | 'VIEW_LOGS';
+export type ConsoleFunction = 'VIEW_INSTANCES' | 'VIEW_DIAGRAM' | 'VIEW_ISSUES' | 'VIEW_REQUESTS' | 'RETRY_REQUEST' | 'VIEW_DEFINITIONS' | 'USE_AGENT' | 'VIEW_LOGS' | 'VIEW_WORK_ORDERS';
 
 export interface Me {
   login: string;
@@ -368,6 +368,36 @@ export interface LogFindResult {
   resumeFile?: number | null;
   resumeOffset?: number | null;
   done: boolean;
+}
+
+/** One task of a work order, with its work order and item (WF_WORK_ORDER, WF_WORK_ORDER_ITEM, WF_WORK). */
+export interface WorkOrderTask {
+  workOrderId: string;
+  woStatus?: string;
+  woStage?: string;
+  requestType?: string;
+  initiated?: string;
+  woItemId?: string;
+  itemSequence?: number | null;
+  workId: number;
+  workSpec?: string;
+  status?: string;
+  statusName?: string;
+  owner?: string;
+  currentActivity?: string;
+  generated?: string;
+  started?: string;
+  ended?: string;
+  planStart?: string;
+  planEnd?: string;
+  updatedBy?: string;
+  updated?: string;
+  instanceId?: number | null;
+  relatedInstance?: number | null;
+  relatedTask?: number | null;
+  /** The instance still exists in the engine tables, so it can be opened. */
+  instanceKnown: boolean;
+  relatedKnown: boolean;
 }
 
 export interface AttributePage {
