@@ -3,6 +3,16 @@
 <head>
   <meta charset="utf-8">
   <title>BPM Operations Console</title>
+  <script>
+    // The app lives at a folder address. Opened without the closing slash (/bpm-console), its relative file addresses
+    // would point at the server root, so go to the address with the slash before anything else loads.
+    (function () {
+      var p = location.pathname;
+      if (p.charAt(p.length - 1) !== '/' && !/\.[A-Za-z0-9]+$/.test(p.split('/').pop())) {
+        location.replace(p + '/' + location.search + location.hash);
+      }
+    })();
+  </script>
   <base href="./">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
