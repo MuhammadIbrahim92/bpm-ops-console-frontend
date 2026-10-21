@@ -12,7 +12,8 @@ function policy(): string {
     + `script-src 'unsafe-inline' ${origin}; style-src 'unsafe-inline' ${origin}; img-src data: ${origin}; font-src data: ${origin}; `
     // only the static resources may be fetched (the browser's developer tools ask for the source maps of the libraries);
     // the API and every other address stay blocked
-    + `connect-src ${origin}/resources/">`;
+    // (under the application's own address, which is not the server root when it is deployed under a context root)
+    + `connect-src ${new URL('resources/', base).href}">`;
 }
 
 /**
