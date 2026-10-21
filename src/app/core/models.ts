@@ -320,6 +320,8 @@ export interface AgentAnswer {
 
 /** An engine log file the console may read. */
 export interface LogFile {
+  /** The file holds web service calls (searched for a service task's request UUID). */
+  webService?: boolean;
   id: string;
   name: string;
   folder: number;

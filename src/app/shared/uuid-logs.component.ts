@@ -7,9 +7,10 @@ import { describeError } from '../core/errors';
 import { LogFileHit } from '../core/models';
 
 /**
- * The engine log lines that mention one request UUID (a service task's REQUEST_UUID). Nothing is read until the person
- * asks. Only the log files changed since the step started are searched (an older file cannot mention it), newest first,
- * a limited amount at a time; "Keep searching" goes on.
+ * The web service call log lines that mention one request UUID (a service task's REQUEST_UUID). Nothing is read until the
+ * person asks. Only the web service call files (calls_ws_apis.out and its rotated copies, set by
+ * console.logs.web-service-file-pattern) changed since the step started are searched (an older file cannot mention it),
+ * newest first, a limited amount at a time; "Keep searching" goes on.
  */
 @Component({
   selector: 'app-uuid-logs',
@@ -17,7 +18,7 @@ import { LogFileHit } from '../core/models';
   imports: [RouterLink, ButtonModule, MessageModule],
   template: `
     <div class="flex flex-wrap items-center gap-2">
-      <p-button type="button" icon="pi pi-file" label="Find in engine logs" size="small" severity="secondary" [outlined]="true"
+      <p-button type="button" icon="pi pi-file" label="Find in web service logs" size="small" severity="secondary" [outlined]="true"
         (onClick)="start()" [disabled]="busy() || !uuid()" />
       @if (note()) { <span class="text-muted-color text-sm">{{ note() }}</span> }
       @if (resume() !== null) {
@@ -71,13 +72,17 @@ export class UuidLogsComponent {
       next: r => {
         const from = this.since() ? new Date(this.since()!).getTime() - 60_000 : 0;
         // files come newest first; one changed before the step began cannot hold its lines
-        this.ids = r.files.filter(f => !from || new Date(f.modified).getTime() >= from).slice(0, 50).map(f => f.id);
+        const calls = r.files.filter(f => f.webService);
+        this.ids = calls.filter(f => !from || new Date(f.modified).getTime() >= from).slice(0, 50).map(f => f.id);
         if (!r.configured) {
           this.busy.set(false);
           this.note.set('No log folder is configured.');
+        } else if (calls.length === 0) {
+          this.busy.set(false);
+          this.note.set('No web service call log file was found (calls_ws_apis.out). Check console.logs.dirs and console.logs.web-service-file-pattern.');
         } else if (this.ids.length === 0) {
           this.busy.set(false);
-          this.note.set('No log file was changed since this step started.');
+          this.note.set('No web service call log file was changed since this step started.');
         } else {
           this.run(0, 0);
         }

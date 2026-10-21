@@ -5,7 +5,8 @@ import { ApiService } from '../core/api.service';
 import { LogFile, LogFindResult } from '../core/models';
 import { UuidLogsComponent } from './uuid-logs.component';
 
-const file = (id: string, modified: string): LogFile => ({ id, name: id.split('/')[1], folder: 0, sizeBytes: 1000, modified });
+const file = (id: string, modified: string, webService = true): LogFile =>
+  ({ id, name: id.split('/')[1], folder: 0, sizeBytes: 1000, modified, webService });
 
 describe('UuidLogsComponent', () => {
   it('searches only the files changed since the step started and lists the lines found', () => {
@@ -15,7 +16,7 @@ describe('UuidLogsComponent', () => {
       providers: [provideRouter([]), {
         provide: ApiService,
         useValue: {
-          logFiles: () => of({ configured: true, files: [file('0/new.log', '2026-10-19T12:00:00'), file('0/old.log', '2026-10-01T12:00:00')] }),
+          logFiles: () => of({ configured: true, files: [file('0/new.log', '2026-10-19T12:00:00'), file('0/old.log', '2026-10-01T12:00:00'), file('0/engine.log', '2026-10-19T12:00:00', false)] }),
           logFind: (files: string[], text: string) => { calls.push({ files, text }); return of(result); }
         }
       }]
@@ -43,6 +44,19 @@ describe('UuidLogsComponent', () => {
     f.componentRef.setInput('uuid', 'abc');
     f.componentRef.setInput('since', '2026-10-19T11:00:00');
     f.componentInstance.start();
-    expect(f.componentInstance.note()).toContain('No log file was changed');
+    expect(f.componentInstance.note()).toContain('No web service call log file was changed');
+  });
+
+  it('says so when there is no web service call log file', () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), {
+        provide: ApiService,
+        useValue: { logFiles: () => of({ configured: true, files: [file('0/engine.log', '2026-10-19T12:00:00', false)] }) }
+      }]
+    });
+    const f = TestBed.createComponent(UuidLogsComponent);
+    f.componentRef.setInput('uuid', 'abc');
+    f.componentInstance.start();
+    expect(f.componentInstance.note()).toContain('No web service call log file was found');
   });
 });
